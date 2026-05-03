@@ -24,11 +24,40 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
 
+  // Compress & preview image before upload
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
-      setFile(selectedFile);
-      setPreview(URL.createObjectURL(selectedFile));
+
+      // Revoke previous preview URL to free memory
+      if (preview) URL.revokeObjectURL(preview);
+
+      // Only compress if image is bigger than 1MB
+      if (selectedFile.size > 1024 * 1024) {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        const objectUrl = URL.createObjectURL(selectedFile);
+        img.onload = () => {
+          const MAX = 600;
+          const ratio = Math.min(MAX / img.width, MAX / img.height);
+          canvas.width = img.width * ratio;
+          canvas.height = img.height * ratio;
+          ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const compressed = new File([blob], selectedFile.name, { type: 'image/jpeg' });
+              setFile(compressed);
+              setPreview(URL.createObjectURL(compressed));
+            }
+          }, 'image/jpeg', 0.75);
+          URL.revokeObjectURL(objectUrl);
+        };
+        img.src = objectUrl;
+      } else {
+        setFile(selectedFile);
+        setPreview(URL.createObjectURL(selectedFile));
+      }
     }
   };
 
@@ -71,14 +100,15 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-ink/70 flex items-end sm:items-center justify-center p-4"
           onClick={onClose}
         >
           <motion.div 
-            initial={{ scale: 0.9, y: 20 }}
-            animate={{ scale: 1, y: 0 }}
-            exit={{ scale: 0.9, y: 20 }}
-            className="bg-parchment-light w-full max-w-sm rounded-3xl p-6 shadow-2xl"
+            initial={{ y: '100%', opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: '100%', opacity: 0 }}
+            transition={{ type: 'tween', duration: 0.25, ease: 'easeOut' }}
+            className="bg-parchment-light w-full max-w-sm rounded-3xl p-6 shadow-2xl max-h-[92vh] overflow-y-auto"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-6">
