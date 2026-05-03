@@ -1,0 +1,64 @@
+export interface DBProfile {
+  id: string;
+  email: string;
+  name: string;
+  avatar_url: string | null;
+  karma_physical: number;
+  karma_intellectual: number;
+  karma_social: number;
+  lat: number | null;
+  lng: number | null;
+  created_at: string;
+}
+
+export interface DBLineage {
+  id: string;
+  book_id: string;
+  city: string;
+  owner_name: string;
+  date: string;
+  created_at: string;
+}
+
+export interface DBBook {
+  id: string;
+  title: string;
+  author: string;
+  cover_url: string;
+  condition: string;
+  pace: string;
+  depth: string;
+  progress: number;
+  owner_id: string;
+  distance_km: number;
+  time_capsule_message: string | null;
+  time_capsule_from: string | null;
+  lat: number | null;
+  lng: number | null;
+  created_at: string;
+  book_lineage?: DBLineage[];
+  profiles?: Partial<DBProfile>;
+}
+
+export interface DBDuel {
+  id: string;
+  scriptum_id: string;
+  opponent_id: string;
+  argument: string;
+  support_count: number;
+  oppose_count: number;
+  created_at: string;
+  profiles?: Partial<DBProfile>;
+}
+
+export interface DBScriptum {
+  id: string;
+  book_id: string;
+  user_id: string;
+  content: string;
+  highlighted_text: string | null;
+  likes: number;
+  created_at: string;
+  profiles?: Partial<DBProfile>;
+  scriptum_duels?: DBDuel[];
+}

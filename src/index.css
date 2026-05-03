@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-parchment-light text-ink font-sans antialiased;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
+}
+
+.theme-gold {
+  --tw-bg-opacity: 1;
+  background-color: #1A1A1A; /* Dark background */
+  color: #D4AF37; /* Gold text */
+}
+
+.theme-gold .bg-parchment-light {
+  background-color: #1A1A1A;
+}
+
+.theme-gold .text-ink {
+  color: #D4AF37;
+}
+
+.theme-gold .bg-white {
+  background-color: #242424;
+  border-color: #D4AF37;
+}
+
+.theme-gold .bg-ink {
+  background-color: #D4AF37;
+  color: #1A1A1A;
+}
+
+.theme-gold .text-karma {
+  color: #FACC15;
+}
+
+/* ========================
+   Leaflet Map Fixes
+   ======================== */
+.leaflet-container {
+  z-index: 0 !important;
+  border-radius: inherit;
+}
+
+.leaflet-pane {
+  z-index: 400 !important;
+}
+
+.leaflet-tile-pane {
+  z-index: 200 !important;
+}
+
+.leaflet-overlay-pane {
+  z-index: 400 !important;
+}
+
+.leaflet-marker-pane {
+  z-index: 600 !important;
+}
+
+.leaflet-control-container {
+  z-index: 800 !important;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 800 !important;
+}
+
+/* Fix Leaflet tile image rendering */
+.leaflet-tile {
+  opacity: 1 !important;
+}
+
+.leaflet-tile-loaded {
+  opacity: 1 !important;
+}
