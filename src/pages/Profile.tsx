@@ -2,14 +2,25 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, PolarRadiusAxis } from 'recharts';
 import { useStore } from '../store/useStore';
-import { Shield, BookOpen, MessageSquare, Award, Plus, MapPin, Edit2, Trash2, Moon, Sun, Camera } from 'lucide-react';
+import { Shield, BookOpen, MessageSquare, Award, Plus, MapPin, Edit2, Trash2, Moon, Sun, Camera, ArrowRightLeft, Clock, X, Users, ChevronRight, CheckCircle, XCircle } from 'lucide-react';
 import { AddBookModal } from '../components/AddBookModal';
 import { EditBookModal } from '../components/EditBookModal';
 import { getCurrentLocation } from '../lib/location';
 import imageCompression from 'browser-image-compression';
 
 export const Profile: React.FC = () => {
-  const { user, books, incomingRequests, respondToSwapRequest, deleteBook, updateLocation, setActiveTab, theme, setTheme } = useStore();
+  const { user, books, incomingRequests, respondToSwapRequest, deleteBook, updateLocation, setActiveTab, theme, setTheme, requestedSwaps, setViewedUser } = useStore();
+  const [cancelledSwaps, setCancelledSwaps] = React.useState<string[]>([]);
+
+  // Books user has sent swap requests for (that haven't been cancelled locally)
+  const pendingBooks = books.filter(
+    b => requestedSwaps.includes(b.id) && !cancelledSwaps.includes(b.id)
+  );
+
+  const getBookOwner = (ownerId: string) =>
+    books.find(b => b.ownerId === ownerId && b.ownerId !== user.id)
+      ? ownerId
+      : ownerId;
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);
   const [editingBook, setEditingBook] = useState<any>(null);
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
@@ -219,38 +230,162 @@ export const Profile: React.FC = () => {
 
       {/* Incoming Requests */}
       {incomingRequests && incomingRequests.length > 0 && (
-        <motion.section variants={item} className="space-y-4 mb-8">
-          <div className="flex justify-between items-end">
+        <motion.section variants={item} className="space-y-4">
+          <div className="flex justify-between items-center">
             <h2 className="font-serif text-xl">Gelen Takas İstekleri</h2>
-            <span className="text-xs text-red-500 font-medium bg-red-100 px-2 py-1 rounded-full animate-pulse">{incomingRequests.length} Yeni İstek</span>
+            <span className="text-xs text-red-500 font-bold bg-red-50 border border-red-200 px-2 py-1 rounded-full animate-pulse">
+              {incomingRequests.length} Yeni
+            </span>
           </div>
           <div className="space-y-3">
-            {incomingRequests.map(req => (
-              <div key={req.id} className="bg-white p-4 rounded-2xl shadow-sm border border-red-500/20 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <img src={req.requesterAvatar} alt={req.requesterName} className="w-10 h-10 rounded-full border border-ink/10" />
-                    <div>
-                      <p className="text-sm font-bold text-ink leading-tight">{req.requesterName}</p>
-                      <p className="text-xs text-ink/60">"{req.bookTitle}" kitabınızı istiyor.</p>
+            {incomingRequests.map(req => {
+              const requestedBook = books.find(b => b.id === req.bookId);
+              const requesterUser = { 
+                id: req.requesterId, 
+                name: req.requesterName, 
+                avatar: req.requesterAvatar,
+                karma: { physical: 70, intellectual: 65, social: 90, total: 75 }
+              };
+              return (
+                <motion.div
+                  key={req.id}
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white rounded-2xl shadow-sm border border-red-100 overflow-hidden"
+                >
+                  {/* Header: requester info */}
+                  <div className="flex items-center gap-3 p-4 border-b border-ink/5">
+                    <button
+                      onClick={() => { setViewedUser(requesterUser as any); setActiveTab('publicProfile'); }}
+                      className="relative flex-shrink-0 group"
+                      title="Profili Görüntüle"
+                    >
+                      <img
+                        src={req.requesterAvatar}
+                        alt={req.requesterName}
+                        className="w-11 h-11 rounded-full border-2 border-karma/30 object-cover group-hover:border-karma transition-colors"
+                      />
+                      <div className="absolute inset-0 rounded-full bg-ink/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Users size={14} className="text-white" />
+                      </div>
+                    </button>
+                    <div className="flex-grow min-w-0">
+                      <button
+                        onClick={() => { setViewedUser(requesterUser as any); setActiveTab('publicProfile'); }}
+                        className="font-bold text-sm text-ink hover:text-karma transition-colors text-left"
+                      >
+                        {req.requesterName}
+                      </button>
+                      <p className="text-[11px] text-ink/50">"{req.bookTitle}" kitabını takaslamak istiyor</p>
                     </div>
+                    <span className="text-[9px] font-bold bg-orange-50 text-orange-500 border border-orange-200 px-2 py-0.5 rounded-full flex-shrink-0">
+                      BEKLEMEDE
+                    </span>
+                  </div>
+
+                  {/* Book preview */}
+                  {requestedBook && (
+                    <div
+                      className="flex items-center gap-3 px-4 py-3 bg-parchment-light/50 cursor-pointer hover:bg-parchment-light transition-colors"
+                      onClick={() => { useStore.getState().setSelectedBook(requestedBook.id); setActiveTab('bookDetail'); }}
+                    >
+                      <div className="w-10 h-14 rounded-lg overflow-hidden bg-parchment-dark flex-shrink-0 shadow-sm">
+                        <img src={requestedBook.cover} alt={requestedBook.title} className="w-full h-full object-cover" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-ink truncate">{requestedBook.title}</p>
+                        <p className="text-[10px] text-ink/50 truncate">{requestedBook.author}</p>
+                        <span className="text-[9px] px-2 py-0.5 bg-white rounded border border-ink/10 text-ink/60 mt-0.5 inline-block">{requestedBook.condition}</span>
+                      </div>
+                      <div className="ml-auto text-ink/20">
+                        <ChevronRight size={16} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action buttons */}
+                  <div className="flex gap-2 p-3">
+                    <button
+                      onClick={() => respondToSwapRequest(req.id, true)}
+                      className="flex-1 bg-ink text-white py-2.5 rounded-xl text-xs font-bold hover:bg-ink/80 transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <CheckCircle size={14} /> Kabul Et
+                    </button>
+                    <button
+                      onClick={() => respondToSwapRequest(req.id, false)}
+                      className="flex-1 bg-red-50 text-red-600 border border-red-200 py-2.5 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <XCircle size={14} /> Reddet
+                    </button>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </motion.section>
+      )}
+
+      {/* Outgoing / Pending Swap Requests */}
+      {pendingBooks.length > 0 && (
+        <motion.section variants={item} className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="font-serif text-xl flex items-center gap-2">
+              <ArrowRightLeft size={18} className="text-karma" />
+              Takas Bekleyen
+            </h2>
+            <span className="text-xs font-bold bg-karma/20 text-karma px-2 py-1 rounded-full border border-karma/20">
+              {pendingBooks.length} İstek
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {pendingBooks.map(book => (
+              <motion.div
+                key={book.id}
+                layout
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, x: -40 }}
+                className="flex gap-3 p-3 bg-white rounded-2xl shadow-sm border border-karma/10 relative overflow-hidden"
+              >
+                {/* Subtle karma shimmer */}
+                <div className="absolute top-0 left-0 w-1 h-full bg-karma rounded-l-2xl" />
+
+                <div
+                  className="w-14 h-20 rounded-xl overflow-hidden bg-parchment-dark flex-shrink-0 cursor-pointer"
+                  onClick={() => { useStore.getState().setSelectedBook(book.id); setActiveTab('bookDetail'); }}
+                >
+                  <img src={book.cover} alt={book.title} className="w-full h-full object-cover" />
+                </div>
+
+                <div className="flex flex-col flex-grow min-w-0 py-0.5">
+                  <h3
+                    className="font-serif font-bold text-sm leading-tight truncate cursor-pointer hover:text-karma transition-colors"
+                    onClick={() => { useStore.getState().setSelectedBook(book.id); setActiveTab('bookDetail'); }}
+                  >
+                    {book.title}
+                  </h3>
+                  <p className="text-[11px] text-ink/50 truncate mb-1">{book.author}</p>
+                  <div className="flex items-center gap-1.5 mt-auto">
+                    <Clock size={11} className="text-karma/70" />
+                    <span className="text-[10px] text-karma font-bold">Yanıt Bekleniyor</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <span className="text-[10px] px-2 py-0.5 bg-parchment-light rounded border border-ink/10 text-ink/60">{book.condition}</span>
+                    <span className="text-[10px] text-ink/40">{book.distance} km uzakta</span>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => respondToSwapRequest(req.id, true)}
-                    className="flex-1 bg-ink text-white py-2 rounded-xl text-xs font-bold hover:bg-ink/80 transition-colors"
-                  >
-                    Kabul Et
-                  </button>
-                  <button 
-                    onClick={() => respondToSwapRequest(req.id, false)}
-                    className="flex-1 bg-red-50 text-red-600 border border-red-200 py-2 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors"
-                  >
-                    Reddet
-                  </button>
-                </div>
-              </div>
+
+                {/* Cancel button */}
+                <button
+                  onClick={() => setCancelledSwaps(prev => [...prev, book.id])}
+                  className="absolute top-3 right-3 w-6 h-6 rounded-full bg-ink/5 flex items-center justify-center text-ink/30 hover:bg-red-50 hover:text-red-400 transition-colors"
+                  title="İsteği İptal Et"
+                >
+                  <X size={13} />
+                </button>
+              </motion.div>
             ))}
           </div>
         </motion.section>

@@ -36,7 +36,18 @@ export interface BookSlice {
 export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSlice> = (set, get) => ({
   books: mockBooks,
   requestedSwaps: [],
-  incomingRequests: [],
+  incomingRequests: [
+    {
+      id: 'mock-req-1',
+      bookId: 'b1',
+      bookTitle: 'Körlük',
+      requesterName: 'Caner Öz',
+      requesterAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026024d',
+      requesterId: 'u2',
+      status: 'pending' as const,
+      createdAt: new Date().toISOString(),
+    }
+  ],
 
   mapDBBookToState: (dbBook, userLat, userLng): Book => {
     const ownerLat = dbBook.profiles?.lat || dbBook.lat;
