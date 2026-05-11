@@ -6,7 +6,7 @@ import type { User } from '../mockData';
 import { mockRooms } from '../mockData';
 
 export const Discovery: React.FC = () => {
-  const { books, user, searchUsers, setViewedUser, setActiveTab } = useStore();
+  const { books, user, searchUsers, setViewedUser, setActiveTab, setSelectedBook } = useStore();
   const [tempo, setTempo] = useState<number>(50);
   const [depth, setDepth] = useState<number>(50);
   const [searchTab, setSearchTab] = useState<'books' | 'users' | 'rooms'>('books');
@@ -169,6 +169,7 @@ export const Discovery: React.FC = () => {
                   key={book.id} 
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
+                  onClick={() => { setSelectedBook(book.id); setActiveTab('bookDetail'); }}
                   className="flex gap-4 p-3 bg-white rounded-2xl shadow-sm border border-ink/5 hover:shadow-md transition-shadow cursor-pointer group"
                 >
                   <div className="w-20 h-28 rounded-lg overflow-hidden bg-parchment-dark flex-shrink-0">

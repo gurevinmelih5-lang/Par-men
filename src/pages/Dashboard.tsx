@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getCurrentLocation } from '../lib/location';
 
 export const Dashboard: React.FC = () => {
-  const { user, books, scriptums, setActiveTab, requestSwap, requestedSwaps, updateReadingProgress, updateLocation } = useStore();
+  const { user, books, scriptums, setActiveTab, requestSwap, requestedSwaps, updateReadingProgress, updateLocation, setSelectedBook } = useStore();
   const [isEditingProgress, setIsEditingProgress] = useState(false);
   const [tempProgress, setTempProgress] = useState(45); // Default matching mock data
   const [isLocating, setIsLocating] = useState(false);
@@ -129,7 +129,12 @@ export const Dashboard: React.FC = () => {
       <motion.section variants={item} className="space-y-4">
         <div className="flex justify-between items-end">
           <h2 className="font-serif text-xl">Yakınındaki Fırsatlar</h2>
-          <span onClick={() => setActiveTab('discovery')} className="text-xs text-karma font-medium cursor-pointer hover:text-karma/80 transition-colors">Tümünü Gör</span>
+          <span 
+            onClick={() => setActiveTab('discovery')} 
+            className="text-xs text-karma font-medium cursor-pointer hover:text-karma/80 transition-colors"
+          >
+            Tümünü Gör
+          </span>
         </div>
         
         <div className="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6 snap-x" style={{ scrollbarWidth: 'none' }}>
@@ -140,7 +145,7 @@ export const Dashboard: React.FC = () => {
             >
               <div 
                 className="relative h-32 mb-3 rounded-lg overflow-hidden bg-parchment-dark cursor-pointer group"
-                onClick={() => setActiveTab('bookDetail')}
+                onClick={() => { setSelectedBook(book.id); setActiveTab('bookDetail'); }}
               >
                 <img src={book.cover} alt={book.title} className="w-full h-full object-cover opacity-90 transition-transform duration-500 group-hover:scale-105" />
                 <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 text-ink shadow-sm">

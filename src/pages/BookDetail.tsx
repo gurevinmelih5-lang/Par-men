@@ -5,8 +5,8 @@ import { useStore } from '../store/useStore';
 import { AddScriptumModal } from '../components/AddScriptumModal';
 
 export const BookDetail: React.FC = () => {
-  const { books, scriptums, setActiveTab, user } = useStore();
-  const book = books[0]; // Simulating with the first book
+  const { books, scriptums, setActiveTab, user, selectedBookId } = useStore();
+  const book = books.find(b => b.id === selectedBookId) || books[0]; // fallback to first book
   const bookScriptums = book ? scriptums.filter(s => s.bookId === book.id) : [];
   const isOwner = book ? book.ownerId === user.id : false;
   const isRequested = book ? useStore(state => state.requestedSwaps).includes(book.id) : false;
