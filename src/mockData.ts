@@ -53,6 +53,25 @@ export interface Book {
     message: string;
     from: string;
   };
+  dna?: {
+    readingHours: string;
+    emotion: string;
+    emotionPercentage: number;
+    theme: string;
+    retentionDays: number;
+    demographics: string;
+  };
+  isLegendary?: boolean;
+}
+
+export interface ScriptumReply {
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  content: string;
+  timestamp: string;
+  likes: number;
 }
 
 export interface DuelArgument {
@@ -73,6 +92,19 @@ export interface Scriptum {
   highlightedText?: string;
   likes: number;
   duel?: DuelArgument;
+  replies?: ScriptumReply[];
+}
+
+export interface Room {
+  id: string;
+  title: string;
+  hostName: string;
+  hostAvatar: string;
+  participants: number;
+  maxParticipants: number;
+  time: string;
+  isLive: boolean;
+  type: 'Sessiz Okuma' | 'Felsefe Tartışması' | 'Gece Okuması';
 }
 
 export const currentUser: User = {
@@ -108,7 +140,7 @@ export const mockBooks: Book[] = [
     id: 'b1',
     title: 'Körlük',
     author: 'José Saramago',
-    cover: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=400',
+    cover: 'https://images.unsplash.com/photo-1476275466078-4007374efac4?w=400',
     condition: 'Good',
     pace: 'Medium',
     depth: 'High',
@@ -125,13 +157,22 @@ export const mockBooks: Book[] = [
     timeCapsule: {
       message: "Kitabın sonlarına doğru kendi körlüğümü sorguladığım o anı asla unutmayacağım. Umarım bu kitap sana da ışık olur.",
       from: "Ahmet Y."
-    }
+    },
+    dna: {
+      readingHours: "01:00 - 03:00",
+      emotion: "Melankolik",
+      emotionPercentage: 62,
+      theme: "Vicdan",
+      retentionDays: 18,
+      demographics: "24-35 Yaş"
+    },
+    isLegendary: true
   },
   {
     id: 'b2',
     title: 'Otostopçunun Galaksi Rehberi',
     author: 'Douglas Adams',
-    cover: 'https://images.unsplash.com/photo-1618666012174-83b441c0bc76?auto=format&fit=crop&q=80&w=400',
+    cover: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400',
     condition: 'Mint',
     pace: 'Fast',
     depth: 'Medium',
@@ -141,13 +182,21 @@ export const mockBooks: Book[] = [
     lng: 28.9550,
     lineage: [
       { city: 'Ankara', date: 'Ocak 2025', ownerName: 'Elif Demir' }
-    ]
+    ],
+    dna: {
+      readingHours: "18:00 - 21:00",
+      emotion: "Maceraperest",
+      emotionPercentage: 85,
+      theme: "Varoluş",
+      retentionDays: 12,
+      demographics: "18-28 Yaş"
+    }
   },
   {
     id: 'b3',
     title: 'Yüzyıllık Yalnızlık',
     author: 'Gabriel García Márquez',
-    cover: 'https://images.unsplash.com/photo-1589829085413-56de8ae18c73?auto=format&fit=crop&q=80&w=400',
+    cover: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=400',
     condition: 'Fair',
     pace: 'Slow',
     depth: 'High',
@@ -163,6 +212,14 @@ export const mockBooks: Book[] = [
     timeCapsule: {
       message: "Macondo'nun o yağmurlu günlerinde kaybolmak ne güzeldi. Bu satırlar arasında sen de kendi yalnızlığını bulacaksın.",
       from: "Kaan B."
+    },
+    dna: {
+      readingHours: "22:00 - 01:00",
+      emotion: "Nostaljik",
+      emotionPercentage: 74,
+      theme: "Yalnızlık",
+      retentionDays: 25,
+      demographics: "30-45 Yaş"
     }
   }
 ];
@@ -177,6 +234,26 @@ export const mockScriptums: Scriptum[] = [
     highlightedText: "Gözleri kapattığınızda",
     content: "İnsanlığın ne kadar kırılgan olduğunu anlatan sarsıcı bir deneyim. Gözleri kapattığınızda asıl körlüğün ne olduğunu anlıyorsunuz.",
     likes: 14,
+    replies: [
+      {
+        id: 'r1',
+        userId: 'u3',
+        userName: 'Elif Demir',
+        userAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704b',
+        content: 'Buna kesinlikle katılıyorum. Roman boyunca asıl körlüğün fiziksel değil, ruhsal bir çürüme olduğu vurgulanmış.',
+        timestamp: '2025',
+        likes: 8
+      },
+      {
+        id: 'r2',
+        userId: 'u1',
+        userName: 'Aylin Yılmaz',
+        userAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d',
+        content: 'Ben bunu daha çok sistemin ve toplumsal normların çöküşü olarak okudum. Çok etkileyici bir eserdi.',
+        timestamp: '2026',
+        likes: 12
+      }
+    ],
     duel: {
       opponentName: 'Elif Demir',
       opponentAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704b',
@@ -206,5 +283,41 @@ export const mockSwapNegotiations: SwapNegotiation[] = [
     messages: [
       { id: 'm1', senderId: 'u1', text: 'Merhaba, Körlük kitabını takaslamak ister misin?', timestamp: '10:00' }
     ]
+  }
+];
+
+export const mockRooms: Room[] = [
+  {
+    id: 'room1',
+    title: 'Pazar Sabahı Sessizliği',
+    hostName: 'Elif Demir',
+    hostAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704b',
+    participants: 12,
+    maxParticipants: 20,
+    time: 'Canlı (Şu an)',
+    isLive: true,
+    type: 'Sessiz Okuma'
+  },
+  {
+    id: 'room2',
+    title: 'Gece Vardiyası: Kara Roman',
+    hostName: 'Caner Öz',
+    hostAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026024d',
+    participants: 8,
+    maxParticipants: 15,
+    time: 'Bugün 23:30',
+    isLive: false,
+    type: 'Gece Okuması'
+  },
+  {
+    id: 'room3',
+    title: 'Saramago Üzerine',
+    hostName: 'Aylin Yılmaz',
+    hostAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d',
+    participants: 45,
+    maxParticipants: 50,
+    time: 'Yarın 20:00',
+    isLive: false,
+    type: 'Felsefe Tartışması'
   }
 ];

@@ -4,6 +4,7 @@ import { X, Book, Upload } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { supabase } from '../lib/supabase';
 import type { Book as BookType } from '../mockData';
+import imageCompression from 'browser-image-compression';
 
 interface EditBookModalProps {
   isOpen: boolean;
@@ -40,11 +41,28 @@ export const EditBookModal: React.FC<EditBookModalProps> = ({ isOpen, onClose, b
     }
   }, [book]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
-      setFile(selectedFile);
-      setPreview(URL.createObjectURL(selectedFile));
+      
+      if (preview && !preview.startsWith('http')) URL.revokeObjectURL(preview);
+
+      try {
+        const options = {
+          maxSizeMB: 1,
+          maxWidthOrHeight: 800,
+          useWebWorker: true,
+          initialQuality: 0.8
+        };
+        
+        const compressedFile = await imageCompression(selectedFile, options);
+        setFile(compressedFile);
+        setPreview(URL.createObjectURL(compressedFile));
+      } catch (error) {
+        console.error('Error compressing image:', error);
+        setFile(selectedFile);
+        setPreview(URL.createObjectURL(selectedFile));
+      }
     }
   };
 

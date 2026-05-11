@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, MessageSquareQuote, Layers, Star, Map, Lock, Unlock, ThumbsUp, ThumbsDown, MessageSquarePlus } from 'lucide-react';
+import { ChevronLeft, MessageSquareQuote, Layers, Star, Map, Lock, Unlock, ThumbsUp, ThumbsDown, MessageSquarePlus, Dna, Clock, Heart, BookOpen, CalendarDays, MessageCircle } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { AddScriptumModal } from '../components/AddScriptumModal';
 
@@ -106,6 +106,53 @@ export const BookDetail: React.FC = () => {
             gözler önüne seriyor.
           </p>
         </div>
+
+        {/* Kitabın DNA'sı */}
+        {book.dna && (
+          <div className="space-y-4 pt-6 border-t border-ink/10">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-serif text-xl font-bold flex items-center gap-2">
+                <Dna className="text-karma" size={20} />
+                Kitabın Karakteri (DNA)
+              </h2>
+              <span className="text-[10px] bg-karma/10 text-karma px-2 py-1 rounded-full font-bold uppercase tracking-widest border border-karma/20">Yapay Zeka Analizi</span>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white p-4 rounded-2xl border border-ink/5 shadow-sm relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-12 h-12 bg-blue-50 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110" />
+                <Clock size={18} className="text-blue-400 mb-2 relative z-10" />
+                <p className="text-[10px] text-ink/60 font-bold uppercase tracking-wider mb-1 relative z-10">Aktif Okuma Saatleri</p>
+                <p className="text-sm font-bold text-ink relative z-10">{book.dna.readingHours}</p>
+              </div>
+              
+              <div className="bg-white p-4 rounded-2xl border border-ink/5 shadow-sm relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-12 h-12 bg-red-50 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110" />
+                <Heart size={18} className="text-red-400 mb-2 relative z-10" />
+                <p className="text-[10px] text-ink/60 font-bold uppercase tracking-wider mb-1 relative z-10">Baskın Duygu</p>
+                <p className="text-sm font-bold text-ink relative z-10">%{book.dna.emotionPercentage} {book.dna.emotion}</p>
+              </div>
+              
+              <div className="bg-white p-4 rounded-2xl border border-ink/5 shadow-sm relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-12 h-12 bg-karma/10 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110" />
+                <BookOpen size={18} className="text-karma mb-2 relative z-10" />
+                <p className="text-[10px] text-ink/60 font-bold uppercase tracking-wider mb-1 relative z-10">Ana Tema</p>
+                <p className="text-sm font-bold text-ink relative z-10">{book.dna.theme}</p>
+              </div>
+              
+              <div className="bg-white p-4 rounded-2xl border border-ink/5 shadow-sm relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-12 h-12 bg-green-50 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110" />
+                <CalendarDays size={18} className="text-green-500 mb-2 relative z-10" />
+                <p className="text-[10px] text-ink/60 font-bold uppercase tracking-wider mb-1 relative z-10">Ort. Elde Tutulma</p>
+                <p className="text-sm font-bold text-ink relative z-10">{book.dna.retentionDays} Gün</p>
+              </div>
+            </div>
+            
+            <div className="bg-ink/5 rounded-xl p-3 flex items-center justify-between border border-ink/10">
+               <span className="text-xs text-ink/70 font-medium">Bu kitap en çok **{book.dna.demographics}** yaş grubu tarafından okundu.</span>
+            </div>
+          </div>
+        )}
 
         {/* Kitabın Yolculuğu & Zaman Kapsülü */}
         <div className="space-y-6 pt-6 border-t border-ink/10">
@@ -245,6 +292,38 @@ export const BookDetail: React.FC = () => {
                         {scriptum.likes}
                       </div>
                     </div>
+
+                    {/* Scriptum Zinciri - Replies */}
+                    {scriptum.replies && scriptum.replies.length > 0 && (
+                      <div className="mt-4 ml-3 border-l-2 border-karma/30 pl-3 space-y-3">
+                        {scriptum.replies.map((reply, replyIdx) => (
+                          <motion.div
+                            key={reply.id}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: replyIdx * 0.1 }}
+                            className="relative"
+                          >
+                            <div className="absolute -left-[19px] top-2 w-2.5 h-2.5 rounded-full bg-karma/60 border-2 border-parchment-light" />
+                            <div className="bg-parchment-light/60 rounded-xl p-3">
+                              <div className="flex items-center gap-2 mb-1.5">
+                                <img src={reply.userAvatar} alt={reply.userName} className="w-5 h-5 rounded-full object-cover" />
+                                <span className="text-[10px] font-bold text-ink/70">{reply.userName}</span>
+                                <span className="text-[9px] text-ink/40 ml-auto">{reply.timestamp}</span>
+                              </div>
+                              <p className="font-serif text-xs text-ink/80 leading-relaxed italic">"{reply.content}"</p>
+                              <div className="flex items-center gap-1 mt-2 text-[10px] text-karma/70 font-bold">
+                                <Star size={10} fill="currentColor" /> {reply.likes}
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))}
+                        <div className="flex items-center gap-1 pt-1">
+                          <MessageCircle size={12} className="text-ink/30" />
+                          <span className="text-[10px] text-ink/40 font-medium">Bu zincire sen de ekle...</span>
+                        </div>
+                      </div>
+                    )}
 
                     {scriptum.duel && (
                       <div className="mt-4 pt-4 border-t border-ink/5 bg-ink/5 -mx-5 px-5 pb-2 rounded-b-2xl">

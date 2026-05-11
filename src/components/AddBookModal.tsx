@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Book, Upload } from 'lucide-react';
+import { X, Book, Upload, Search } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { supabase } from '../lib/supabase';
+import imageCompression from 'browser-image-compression';
 
 interface AddBookModalProps {
   isOpen: boolean;
@@ -23,38 +24,53 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
   });
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+
+  const searchGoogleBooks = async () => {
+    if (!formData.title) return;
+    setIsSearching(true);
+    try {
+      const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=intitle:${encodeURIComponent(formData.title)}`);
+      const data = await res.json();
+      if (data.items && data.items.length > 0) {
+        const cover = data.items[0].volumeInfo.imageLinks?.thumbnail;
+        const author = data.items[0].volumeInfo.authors?.[0];
+        if (cover) {
+          const secureCover = cover.replace('http:', 'https:');
+          setFormData(prev => ({ ...prev, cover: secureCover, author: author || prev.author }));
+          setPreview(secureCover);
+          setFile(null);
+        }
+      }
+    } catch (error) {
+      console.error('Google Books API error', error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
   // Compress & preview image before upload
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
 
       // Revoke previous preview URL to free memory
       if (preview) URL.revokeObjectURL(preview);
 
-      // Only compress if image is bigger than 1MB
-      if (selectedFile.size > 1024 * 1024) {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const img = new Image();
-        const objectUrl = URL.createObjectURL(selectedFile);
-        img.onload = () => {
-          const MAX = 600;
-          const ratio = Math.min(MAX / img.width, MAX / img.height);
-          canvas.width = img.width * ratio;
-          canvas.height = img.height * ratio;
-          ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-          canvas.toBlob((blob) => {
-            if (blob) {
-              const compressed = new File([blob], selectedFile.name, { type: 'image/jpeg' });
-              setFile(compressed);
-              setPreview(URL.createObjectURL(compressed));
-            }
-          }, 'image/jpeg', 0.75);
-          URL.revokeObjectURL(objectUrl);
+      try {
+        const options = {
+          maxSizeMB: 1,
+          maxWidthOrHeight: 800,
+          useWebWorker: true,
+          initialQuality: 0.8
         };
-        img.src = objectUrl;
-      } else {
+        
+        const compressedFile = await imageCompression(selectedFile, options);
+        setFile(compressedFile);
+        setPreview(URL.createObjectURL(compressedFile));
+      } catch (error) {
+        console.error('Error compressing image:', error);
+        // Fallback to original
         setFile(selectedFile);
         setPreview(URL.createObjectURL(selectedFile));
       }
@@ -123,13 +139,24 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1">Kitap Adı</label>
-                <input 
-                  required 
-                  value={formData.title}
-                  onChange={e => setFormData({...formData, title: e.target.value})}
-                  className="w-full bg-white border border-ink/10 py-3 px-4 rounded-xl text-ink font-medium focus:outline-none focus:border-karma transition-all" 
-                  placeholder="Örn: Körlük" 
-                />
+                <div className="flex gap-2">
+                  <input 
+                    required 
+                    value={formData.title}
+                    onChange={e => setFormData({...formData, title: e.target.value})}
+                    className="flex-1 bg-white border border-ink/10 py-3 px-4 rounded-xl text-ink font-medium focus:outline-none focus:border-karma transition-all" 
+                    placeholder="Örn: Körlük" 
+                  />
+                  <button 
+                    type="button"
+                    onClick={searchGoogleBooks}
+                    disabled={isSearching || !formData.title}
+                    className="bg-ink text-parchment-light px-4 rounded-xl flex items-center justify-center disabled:opacity-50"
+                    title="Otomatik Kapak ve Yazar Bul"
+                  >
+                    {isSearching ? <div className="w-5 h-5 border-2 border-parchment-light border-t-transparent rounded-full animate-spin" /> : <Search size={20} />}
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1">Yazar</label>

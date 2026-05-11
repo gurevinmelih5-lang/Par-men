@@ -2,16 +2,19 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, PolarRadiusAxis } from 'recharts';
 import { useStore } from '../store/useStore';
-import { Shield, BookOpen, MessageSquare, Award, Plus, MapPin, Edit2, Trash2, Moon, Sun } from 'lucide-react';
+import { Shield, BookOpen, MessageSquare, Award, Plus, MapPin, Edit2, Trash2, Moon, Sun, Camera } from 'lucide-react';
 import { AddBookModal } from '../components/AddBookModal';
 import { EditBookModal } from '../components/EditBookModal';
 import { getCurrentLocation } from '../lib/location';
+import imageCompression from 'browser-image-compression';
 
 export const Profile: React.FC = () => {
-  const { user, books, deleteBook, updateLocation, setActiveTab, theme, setTheme } = useStore();
+  const { user, books, incomingRequests, respondToSwapRequest, deleteBook, updateLocation, setActiveTab, theme, setTheme } = useStore();
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);
   const [editingBook, setEditingBook] = useState<any>(null);
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const myBooks = books.filter(b => b.ownerId === user.id);
 
@@ -31,6 +34,26 @@ export const Profile: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (window.confirm('Bu kitabı silmek istediğinize emin misiniz?')) {
       await deleteBook(id);
+    }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      try {
+        setIsUploadingAvatar(true);
+        const options = {
+          maxSizeMB: 0.5,
+          maxWidthOrHeight: 400,
+          useWebWorker: true,
+        };
+        const compressed = await imageCompression(file, options);
+        await useStore.getState().updateUserAvatar(compressed);
+      } catch (error) {
+        console.error('Avatar upload error:', error);
+      } finally {
+        setIsUploadingAvatar(false);
+      }
     }
   };
 
@@ -90,12 +113,27 @@ export const Profile: React.FC = () => {
             </button>
           </div>
         </div>
-        <div className="relative">
-          <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-karma shadow-lg relative z-10">
-            <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+        <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+          <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-karma shadow-lg relative z-10 bg-parchment-dark">
+            <img src={user.avatar} alt={user.name} className={`w-full h-full object-cover transition-opacity ${isUploadingAvatar ? 'opacity-50' : 'group-hover:opacity-80'}`} />
+            <div className="absolute inset-0 bg-ink/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <Camera size={20} className="text-white" />
+            </div>
+            {isUploadingAvatar && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
           </div>
           {/* Decorative badge background */}
           <div className="absolute inset-0 bg-karma/20 scale-125 rounded-full animate-pulse -z-10" />
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            accept="image/*" 
+            className="hidden" 
+            onChange={handleAvatarUpload} 
+          />
         </div>
       </motion.header>
 
@@ -178,6 +216,45 @@ export const Profile: React.FC = () => {
           </button>
         </div>
       </motion.section>
+
+      {/* Incoming Requests */}
+      {incomingRequests && incomingRequests.length > 0 && (
+        <motion.section variants={item} className="space-y-4 mb-8">
+          <div className="flex justify-between items-end">
+            <h2 className="font-serif text-xl">Gelen Takas İstekleri</h2>
+            <span className="text-xs text-red-500 font-medium bg-red-100 px-2 py-1 rounded-full animate-pulse">{incomingRequests.length} Yeni İstek</span>
+          </div>
+          <div className="space-y-3">
+            {incomingRequests.map(req => (
+              <div key={req.id} className="bg-white p-4 rounded-2xl shadow-sm border border-red-500/20 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <img src={req.requesterAvatar} alt={req.requesterName} className="w-10 h-10 rounded-full border border-ink/10" />
+                    <div>
+                      <p className="text-sm font-bold text-ink leading-tight">{req.requesterName}</p>
+                      <p className="text-xs text-ink/60">"{req.bookTitle}" kitabınızı istiyor.</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => respondToSwapRequest(req.id, true)}
+                    className="flex-1 bg-ink text-white py-2 rounded-xl text-xs font-bold hover:bg-ink/80 transition-colors"
+                  >
+                    Kabul Et
+                  </button>
+                  <button 
+                    onClick={() => respondToSwapRequest(req.id, false)}
+                    className="flex-1 bg-red-50 text-red-600 border border-red-200 py-2 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors"
+                  >
+                    Reddet
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.section>
+      )}
 
       {/* My Library */}
       <motion.section variants={item} className="space-y-4">

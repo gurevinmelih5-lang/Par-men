@@ -60,9 +60,12 @@ export const useStore = create<StoreState>()((...a) => ({
           )
         `);
         
-      if (!scriptumsError && scriptumsData) {
+        if (!scriptumsError && scriptumsData) {
         set({ scriptums: scriptumsData.map(s => get().mapDBScriptumToState(s as DBScriptum)) });
       }
+
+      // 4. Fetch Incoming Swap Requests
+      await get().fetchIncomingRequests();
 
     } catch (error) {
       console.error("Error fetching initial data from Supabase:", error);

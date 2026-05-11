@@ -6,7 +6,6 @@ import { Discovery } from './pages/Discovery';
 import { Swap } from './pages/Swap';
 import { Profile } from './pages/Profile';
 import { BookDetail } from './pages/BookDetail';
-import { Arena } from './pages/Arena';
 import { PublicProfile } from './pages/PublicProfile';
 import { Auth } from './pages/Auth';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -38,8 +37,24 @@ function App() {
       }
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    const requestsSubscription = supabase
+      .channel('public:swap_requests')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'swap_requests' },
+        (payload) => {
+          if (session?.user?.id === payload.new.owner_id) {
+            useStore.getState().fetchIncomingRequests();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+      supabase.removeChannel(requestsSubscription);
+    };
+  }, [session?.user?.id]);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -53,8 +68,6 @@ function App() {
         return <Profile />;
       case 'bookDetail':
         return <BookDetail />;
-      case 'arena':
-        return <Arena />;
       case 'publicProfile':
         return <PublicProfile />;
       default:
@@ -80,7 +93,7 @@ function App() {
             initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -10 }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            transition={{ duration: 0.5, ease: 'easeInOut' }}
           >
             {renderContent()}
           </motion.div>

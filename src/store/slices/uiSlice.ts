@@ -1,7 +1,7 @@
 import type { StateCreator } from 'zustand';
 
 export interface UISlice {
-  activeTab: 'dashboard' | 'discovery' | 'swap' | 'profile' | 'bookDetail' | 'arena' | 'publicProfile';
+  activeTab: 'dashboard' | 'discovery' | 'swap' | 'profile' | 'bookDetail' | 'publicProfile';
   theme: 'light' | 'gold';
   setActiveTab: (tab: UISlice['activeTab']) => void;
   setTheme: (theme: 'light' | 'gold') => void;

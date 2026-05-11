@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, SlidersHorizontal, Users, Book as BookIcon } from 'lucide-react';
+import { Search, SlidersHorizontal, Users, Book as BookIcon, BookOpen, Radio, Clock, Lock } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import type { User } from '../mockData';
+import { mockRooms } from '../mockData';
 
 export const Discovery: React.FC = () => {
   const { books, user, searchUsers, setViewedUser, setActiveTab } = useStore();
   const [tempo, setTempo] = useState<number>(50);
   const [depth, setDepth] = useState<number>(50);
-  const [searchTab, setSearchTab] = useState<'books' | 'users'>('books');
+  const [searchTab, setSearchTab] = useState<'books' | 'users' | 'rooms'>('books');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
 
@@ -102,6 +103,12 @@ export const Discovery: React.FC = () => {
             className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-bold rounded-lg transition-colors ${searchTab === 'users' ? 'bg-white shadow-sm text-ink' : 'text-ink/60 hover:text-ink'}`}
           >
             <Users size={16} /> Okurlar
+          </button>
+          <button 
+            onClick={() => setSearchTab('rooms')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-bold rounded-lg transition-colors ${searchTab === 'rooms' ? 'bg-white shadow-sm text-ink' : 'text-ink/60 hover:text-ink'}`}
+          >
+            <BookOpen size={16} /> Odalar
           </button>
         </div>
 
@@ -197,7 +204,7 @@ export const Discovery: React.FC = () => {
             )}
           </div>
         </motion.section>
-      ) : (
+      ) : searchTab === 'users' ? (
         <motion.section variants={item} className="space-y-4">
           <h2 className="font-serif text-xl">Okur Sonuçları</h2>
           <div className="space-y-3">
@@ -220,21 +227,85 @@ export const Discovery: React.FC = () => {
                     <h3 className="font-serif font-bold text-ink">{resultUser.name}</h3>
                     <p className="text-xs text-ink/60">Karma: {resultUser.karma?.total || 0}</p>
                   </div>
-                  <div className="text-karma">
-                    <Users size={18} />
-                  </div>
+                  <div className="text-karma"><Users size={18} /></div>
                 </motion.div>
               ))
             ) : (
               <div className="py-12 px-6 flex flex-col items-center justify-center text-center bg-white/50 rounded-3xl border border-ink/5 border-dashed">
-                <div className="w-16 h-16 rounded-full bg-parchment flex items-center justify-center mb-4 text-ink/20">
-                  <Users size={24} />
-                </div>
-                <p className="font-serif text-lg text-ink/80 mb-2">
-                  {searchQuery.length > 2 ? "Okur bulunamadı." : "Aramak için isim girin..."}
-                </p>
+                <div className="w-16 h-16 rounded-full bg-parchment flex items-center justify-center mb-4 text-ink/20"><Users size={24} /></div>
+                <p className="font-serif text-lg text-ink/80 mb-2">{searchQuery.length > 2 ? "Okur bulunamadı." : "Aramak için isim girin..."}</p>
               </div>
             )}
+          </div>
+        </motion.section>
+      ) : (
+        <motion.section variants={item} className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-serif text-xl">Okuma Odaları</h2>
+            <span className="text-[10px] font-bold text-karma bg-karma/10 px-2 py-1 rounded-full border border-karma/20 uppercase tracking-widest">{mockRooms.filter(r => r.isLive).length} Canlı</span>
+          </div>
+          <div className="space-y-3">
+            {mockRooms.map((room, idx) => (
+              <motion.div
+                key={room.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.08 }}
+                className={`p-4 rounded-2xl border shadow-sm relative overflow-hidden ${
+                  room.isLive ? 'bg-ink text-parchment-light border-karma/30' : 'bg-white border-ink/5'
+                }`}
+              >
+                {room.isLive && (
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-karma/10 rounded-bl-full -mr-4 -mt-4" />
+                )}
+                <div className="flex items-start gap-3 relative z-10">
+                  <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-karma/30 flex-shrink-0">
+                    <img src={room.hostAvatar} alt={room.hostName} className="w-full h-full object-cover" />
+                  </div>
+                  <div className="flex-grow">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className={`font-serif font-bold text-base leading-tight ${room.isLive ? 'text-parchment-light' : 'text-ink'}`}>{room.title}</h3>
+                      {room.isLive && (
+                        <span className="flex items-center gap-1 text-[9px] font-bold text-karma bg-karma/20 px-2 py-0.5 rounded-full">
+                          <Radio size={8} className="animate-pulse" /> CANLI
+                        </span>
+                      )}
+                    </div>
+                    <p className={`text-[10px] mt-0.5 ${room.isLive ? 'text-parchment-light/60' : 'text-ink/50'}`}>
+                      {room.hostName} tarafından • {room.type}
+                    </p>
+                    <div className="flex items-center justify-between mt-3">
+                      <div className="flex items-center gap-3">
+                        <span className={`text-[10px] font-bold flex items-center gap-1 ${room.isLive ? 'text-parchment-light/70' : 'text-ink/60'}`}>
+                          <Users size={11} /> {room.participants}/{room.maxParticipants}
+                        </span>
+                        <span className={`text-[10px] font-bold flex items-center gap-1 ${room.isLive ? 'text-karma' : 'text-ink/60'}`}>
+                          <Clock size={11} /> {room.time}
+                        </span>
+                      </div>
+                      <button
+                        className={`text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all active:scale-95 flex items-center gap-1 ${
+                          room.participants >= room.maxParticipants
+                            ? 'bg-ink/20 text-ink/40 cursor-not-allowed'
+                            : room.isLive
+                            ? 'bg-karma text-ink shadow-karma/30 shadow-md'
+                            : 'bg-ink text-parchment-light'
+                        }`}
+                        disabled={room.participants >= room.maxParticipants}
+                      >
+                        {room.participants >= room.maxParticipants ? <><Lock size={10} /> Dolu</> : room.isLive ? 'Katıl' : 'Kaydol'}
+                      </button>
+                    </div>
+                    <div className="mt-2 h-1.5 rounded-full bg-ink/10 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-karma transition-all"
+                        style={{ width: `${(room.participants / room.maxParticipants) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
           </div>
         </motion.section>
       )}

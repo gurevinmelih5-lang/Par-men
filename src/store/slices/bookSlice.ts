@@ -7,14 +7,28 @@ import { calculateDistance } from '../../lib/location';
 import toast from 'react-hot-toast';
 import type { UserSlice } from './userSlice';
 
+export interface SwapRequest {
+  id: string;
+  bookId: string;
+  bookTitle: string;
+  requesterName: string;
+  requesterAvatar: string;
+  requesterId: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  createdAt: string;
+}
+
 export interface BookSlice {
   books: Book[];
   requestedSwaps: string[];
+  incomingRequests: SwapRequest[];
   addBook: (bookData: Partial<Book>) => Promise<void>;
   updateBook: (id: string, updates: Partial<Book>) => Promise<void>;
   deleteBook: (id: string) => Promise<void>;
   executeSwap: (bookId: string) => Promise<void>;
   requestSwap: (bookId: string) => Promise<void>;
+  fetchIncomingRequests: () => Promise<void>;
+  respondToSwapRequest: (requestId: string, accept: boolean) => Promise<void>;
   updateReadingProgress: (bookId: string, progress: number) => Promise<void>;
   mapDBBookToState: (dbBook: DBBook, userLat?: number, userLng?: number) => Book;
 }
@@ -22,6 +36,7 @@ export interface BookSlice {
 export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSlice> = (set, get) => ({
   books: mockBooks,
   requestedSwaps: [],
+  incomingRequests: [],
 
   mapDBBookToState: (dbBook, userLat, userLng): Book => {
     const ownerLat = dbBook.profiles?.lat || dbBook.lat;
@@ -172,10 +187,101 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
   },
 
   requestSwap: async (bookId) => {
-    set(state => ({
-      requestedSwaps: [...state.requestedSwaps, bookId]
-    }));
-    toast.success('Takas isteği gönderildi.');
+    try {
+      const { user, books } = get();
+      if (!user) { toast.error('Giriş yapman gerekiyor.'); return; }
+
+      const book = books.find(b => b.id === bookId);
+      if (!book) return;
+
+      // Check duplicate request
+      if (get().requestedSwaps.includes(bookId)) {
+        toast('Zaten bu kitap için istek gönderdin.', { icon: 'ℹ️' });
+        return;
+      }
+
+      toast.loading('Takas isteği gönderiliyor...', { id: 'reqSwap' });
+
+      const { error } = await supabase.from('swap_requests').insert({
+        book_id: bookId,
+        requester_id: user.id,
+        owner_id: book.ownerId,
+        status: 'pending'
+      });
+
+      if (error) throw error;
+
+      set(state => ({ requestedSwaps: [...state.requestedSwaps, bookId] }));
+      toast.success('Takas isteği kitap sahibine gönderildi!', { id: 'reqSwap' });
+    } catch (error: any) {
+      console.error('Error requesting swap:', error);
+      // If duplicate key (already requested)
+      if (error?.code === '23505') {
+        set(state => ({ requestedSwaps: [...state.requestedSwaps, bookId] }));
+        toast('Bu kitap için zaten istek gönderdin.', { icon: 'ℹ️', id: 'reqSwap' });
+      } else {
+        toast.error('İstek gönderilemedi. Tekrar dene.', { id: 'reqSwap' });
+      }
+    }
+  },
+
+  fetchIncomingRequests: async () => {
+    try {
+      const { user } = get();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('swap_requests')
+        .select(`
+          id,
+          book_id,
+          status,
+          created_at,
+          books ( title ),
+          profiles!swap_requests_requester_id_fkey ( name, avatar_url )
+        `)
+        .eq('owner_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const mapped: SwapRequest[] = (data || []).map((r: any) => ({
+        id: r.id,
+        bookId: r.book_id,
+        bookTitle: r.books?.title || 'Bilinmeyen Kitap',
+        requesterName: r.profiles?.name || 'Anonim',
+        requesterAvatar: r.profiles?.avatar_url || 'https://i.pravatar.cc/150',
+        requesterId: r.requester_id,
+        status: r.status,
+        createdAt: r.created_at
+      }));
+
+      set({ incomingRequests: mapped });
+    } catch (error) {
+      console.error('Error fetching swap requests:', error);
+    }
+  },
+
+  respondToSwapRequest: async (requestId, accept) => {
+    try {
+      const newStatus = accept ? 'accepted' : 'rejected';
+      const { error } = await supabase
+        .from('swap_requests')
+        .update({ status: newStatus })
+        .eq('id', requestId);
+
+      if (error) throw error;
+
+      set(state => ({
+        incomingRequests: state.incomingRequests.filter(r => r.id !== requestId)
+      }));
+
+      toast.success(accept ? 'Takas isteği kabul edildi!' : 'Takas isteği reddedildi.');
+    } catch (error) {
+      console.error('Error responding to swap request:', error);
+      toast.error('İşlem başarısız.');
+    }
   },
 
   updateReadingProgress: async (bookId, progress) => {
