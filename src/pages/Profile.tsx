@@ -16,11 +16,6 @@ export const Profile: React.FC = () => {
   const pendingBooks = books.filter(
     b => requestedSwaps.includes(b.id) && !cancelledSwaps.includes(b.id)
   );
-
-  const getBookOwner = (ownerId: string) =>
-    books.find(b => b.ownerId === ownerId && b.ownerId !== user.id)
-      ? ownerId
-      : ownerId;
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);
   const [editingBook, setEditingBook] = useState<any>(null);
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
