@@ -57,7 +57,7 @@ export const Dashboard: React.FC = () => {
 
   return (
     <motion.div 
-      className="p-6 space-y-8"
+      className="p-6 pb-28 space-y-8"
       variants={container}
       initial="hidden"
       animate="show"

@@ -93,7 +93,7 @@ export const Discovery: React.FC = () => {
   };
 
   return (
-    <motion.div className="p-6 space-y-8" variants={container} initial="hidden" animate="show">
+    <motion.div className="p-6 pb-28 space-y-8" variants={container} initial="hidden" animate="show">
       <motion.header variants={item}>
         <h1 className="text-3xl font-serif text-ink tracking-tight">Keşfet</h1>
         <p className="text-ink/60 mt-2 font-sans text-sm">Ruh haline uygun yeni sayfalar bul.</p>
@@ -127,7 +127,7 @@ export const Discovery: React.FC = () => {
         </div>
 
         {/* Tabs */}
-        <div className="relative z-10 flex p-1 bg-parchment-dark/50 rounded-xl">
+        <div className="relative z-10 flex p-1 bg-parchment-dark/50 rounded-xl overflow-x-auto hide-scrollbar">
           {(['books', 'users', 'rooms'] as const).map(tab => (
             <button
               key={tab}

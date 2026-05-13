@@ -1,11 +1,26 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, MessageSquareQuote, Layers, Star, Map, Lock, Unlock, ThumbsUp, ThumbsDown, MessageSquarePlus, Dna, Clock, Heart, BookOpen, CalendarDays, MessageCircle } from 'lucide-react';
+import { ChevronLeft, MessageSquareQuote, Layers, Star, Map, Lock, Unlock, ThumbsUp, ThumbsDown, MessageSquarePlus, Dna, Clock, Heart, BookOpen, CalendarDays, MessageCircle, Share2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useStore } from '../store/useStore';
 import { AddScriptumModal } from '../components/AddScriptumModal';
 
 export const BookDetail: React.FC = () => {
-  const { books, scriptums, setActiveTab, user, selectedBookId } = useStore();
+  const { books, scriptums, setActiveTab, goBack, user, selectedBookId } = useStore();
+
+  const handleShare = async (title: string, author: string) => {
+    const text = `"${title}" – ${author} | Parşömen'de keşfet!`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title, text, url: window.location.href });
+      } else {
+        await navigator.clipboard.writeText(text);
+        toast.success('Bağlantı panoya kopyalandı!');
+      }
+    } catch {
+      // user cancelled share
+    }
+  };
   const book = books.find(b => b.id === selectedBookId) || books[0]; // fallback to first book
   const bookScriptums = book ? scriptums.filter(s => s.bookId === book.id) : [];
   const isOwner = book ? book.ownerId === user.id : false;
@@ -52,18 +67,26 @@ export const BookDetail: React.FC = () => {
       {/* Header */}
       <header className="absolute top-0 left-0 right-0 p-4 z-20 flex justify-between items-center text-parchment-light">
         <button 
-          onClick={() => setActiveTab('dashboard')}
+          onClick={() => goBack()}
           className="p-2 bg-ink/40 backdrop-blur-md rounded-full hover:bg-ink/60 transition-colors"
         >
           <ChevronLeft size={24} />
         </button>
-        <button 
-          onClick={() => setShowScriptums(true)}
-          className="py-2 px-4 bg-karma/90 backdrop-blur-md rounded-full hover:bg-karma transition-colors shadow-lg shadow-karma/30 flex items-center gap-2 text-ink"
-        >
-          <Layers size={18} />
-          <span className="text-xs font-bold uppercase tracking-wider">{bookScriptums.length} Katman</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => handleShare(book.title, book.author)}
+            className="p-2 bg-ink/40 backdrop-blur-md rounded-full hover:bg-ink/60 transition-colors"
+          >
+            <Share2 size={20} />
+          </button>
+          <button 
+            onClick={() => setShowScriptums(true)}
+            className="py-2 px-4 bg-karma/90 backdrop-blur-md rounded-full hover:bg-karma transition-colors shadow-lg shadow-karma/30 flex items-center gap-2 text-ink"
+          >
+            <Layers size={18} />
+            <span className="text-xs font-bold uppercase tracking-wider">{bookScriptums.length} Katman</span>
+          </button>
+        </div>
       </header>
 
       {/* Book Cover Background */}

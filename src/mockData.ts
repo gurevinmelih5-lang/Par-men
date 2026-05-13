@@ -62,6 +62,12 @@ export interface Book {
     demographics: string;
   };
   isLegendary?: boolean;
+  storyLocations?: {
+    lat: number;
+    lng: number;
+    name: string;
+    description: string;
+  }[];
 }
 
 export interface ScriptumReply {
@@ -116,7 +122,9 @@ export const currentUser: User = {
     intellectual: 92,
     social: 88,
     total: 88
-  }
+  },
+  lat: 41.0315,
+  lng: 28.9810
 };
 
 export const mockUsers: User[] = [
@@ -138,89 +146,97 @@ export const mockUsers: User[] = [
 export const mockBooks: Book[] = [
   {
     id: 'b1',
-    title: 'Körlük',
-    author: 'José Saramago',
-    cover: 'https://images.unsplash.com/photo-1476275466078-4007374efac4?w=400',
-    condition: 'Good',
-    pace: 'Medium',
+    title: 'Masumiyet Müzesi',
+    author: 'Orhan Pamuk',
+    cover: 'https://images.unsplash.com/photo-1544252890-7d7e3dd74404?w=400',
+    condition: 'Mint',
+    pace: 'Slow',
     depth: 'High',
-    ownerId: 'u2',
-    distance: 2.4,
-    lat: 41.0082,
-    lng: 28.9784,
+    ownerId: 'u3',
+    distance: 0.8,
+    lat: 41.0330,
+    lng: 28.9800,
     lineage: [
-      { city: 'İzmir', date: 'Eylül 2024', ownerName: 'Ahmet Y.' },
-      { city: 'İstanbul (Beşiktaş)', date: 'Aralık 2024', ownerName: 'Zeynep T.' },
-      { city: 'İstanbul (Kadıköy)', date: 'Mart 2025', ownerName: 'Caner Öz' }
+      { city: 'İstanbul (Nişantaşı)', date: 'Ocak 2024', ownerName: 'Kemal B.' }
     ],
-    progress: 45,
-    timeCapsule: {
-      message: "Kitabın sonlarına doğru kendi körlüğümü sorguladığım o anı asla unutmayacağım. Umarım bu kitap sana da ışık olur.",
-      from: "Ahmet Y."
-    },
     dna: {
-      readingHours: "01:00 - 03:00",
-      emotion: "Melankolik",
-      emotionPercentage: 62,
-      theme: "Vicdan",
-      retentionDays: 18,
-      demographics: "24-35 Yaş"
+      readingHours: "20:00 - 00:00",
+      emotion: "Tutkulu",
+      emotionPercentage: 88,
+      theme: "Aşk ve Takıntı",
+      retentionDays: 30,
+      demographics: "25-45 Yaş"
     },
-    isLegendary: true
+    isLegendary: true,
+    storyLocations: [
+      { lat: 41.0312, lng: 28.9808, name: "Merhamet Apartmanı", description: "Kemal ve Füsun'un ilk gizli buluşmalarını gerçekleştirdikleri, hikayenin kalbinin attığı Teşvikiye'deki o meşhur apartman." },
+      { lat: 41.0314, lng: 28.9796, name: "Masumiyet Müzesi (Çukurcuma)", description: "Füsun'un ailesiyle yaşadığı ve Kemal'in yıllarca her akşam ziyarete giderek topladığı eşyaları sergilediği gerçek müze binası." },
+      { lat: 41.0500, lng: 28.9950, name: "Şanzelize Butik", description: "Füsun'un tezgahtar olarak çalıştığı ve Kemal'in ona ilk kez vurulduğu Nişantaşı'ndaki lüks butik." }
+    ]
   },
   {
     id: 'b2',
-    title: 'Otostopçunun Galaksi Rehberi',
-    author: 'Douglas Adams',
-    cover: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400',
-    condition: 'Mint',
+    title: 'Cehennem (Inferno)',
+    author: 'Dan Brown',
+    cover: 'https://images.unsplash.com/photo-1533035353720-f1c6a75cd8ab?w=400',
+    condition: 'Good',
     pace: 'Fast',
     depth: 'Medium',
-    ownerId: 'u3',
-    distance: 5.1,
-    lat: 41.0136,
-    lng: 28.9550,
+    ownerId: 'u2',
+    distance: 2.1,
+    lat: 41.0082,
+    lng: 28.9784,
     lineage: [
-      { city: 'Ankara', date: 'Ocak 2025', ownerName: 'Elif Demir' }
+      { city: 'Floransa', date: 'Eylül 2024', ownerName: 'Robert L.' },
+      { city: 'Venedik', date: 'Aralık 2024', ownerName: 'Sienna B.' },
+      { city: 'İstanbul', date: 'Mart 2025', ownerName: 'Caner Öz' }
     ],
+    timeCapsule: {
+      message: "Şifreleri çözerken Yerebatan'da hissettiğim o gerilimi senin de yaşamanı umuyorum.",
+      from: "Robert L."
+    },
     dna: {
-      readingHours: "18:00 - 21:00",
-      emotion: "Maceraperest",
-      emotionPercentage: 85,
-      theme: "Varoluş",
-      retentionDays: 12,
-      demographics: "18-28 Yaş"
-    }
+      readingHours: "18:00 - 23:00",
+      emotion: "Gerilim",
+      emotionPercentage: 92,
+      theme: "Sır ve Kovalamaca",
+      retentionDays: 8,
+      demographics: "18-40 Yaş"
+    },
+    storyLocations: [
+      { lat: 41.0084, lng: 28.9779, name: "Yerebatan Sarnıcı", description: "Veba virüsünün suya karıştırılmak istendiği ve Langdon'ın suların içindeki Medusa başını aradığı karanlık sarnıç." },
+      { lat: 41.0086, lng: 28.9802, name: "Ayasofya", description: "Dandolo'nun mezarının bulunduğu ve şifrelerin ilk kırılmaya başlandığı tarihi mabet." },
+      { lat: 41.0165, lng: 28.9705, name: "Mısır Çarşısı", description: "Kovalamacanın İstanbul sokaklarında labirente dönüştüğü baharat kokulu tarihi çarşı." }
+    ]
   },
   {
     id: 'b3',
-    title: 'Yüzyıllık Yalnızlık',
-    author: 'Gabriel García Márquez',
-    cover: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=400',
+    title: 'İstanbul Hatırası',
+    author: 'Ahmet Ümit',
+    cover: 'https://images.unsplash.com/photo-1541432901042-2d8bd64b4a9b?w=400',
     condition: 'Fair',
-    pace: 'Slow',
+    pace: 'Medium',
     depth: 'High',
     ownerId: 'u2',
-    distance: 1.2,
-    lat: 41.0030,
-    lng: 29.0210,
+    distance: 3.5,
+    lat: 41.0100,
+    lng: 28.9700,
     lineage: [
-      { city: 'Eskişehir', date: 'Haziran 2023', ownerName: 'Kaan B.' },
-      { city: 'Bursa', date: 'Kasım 2023', ownerName: 'Ayşe S.' },
-      { city: 'İstanbul (Moda)', date: 'Şubat 2025', ownerName: 'Caner Öz' }
+      { city: 'İstanbul (Samatya)', date: 'Eylül 2025', ownerName: 'Ahmet T.' }
     ],
-    timeCapsule: {
-      message: "Macondo'nun o yağmurlu günlerinde kaybolmak ne güzeldi. Bu satırlar arasında sen de kendi yalnızlığını bulacaksın.",
-      from: "Kaan B."
-    },
     dna: {
-      readingHours: "22:00 - 01:00",
-      emotion: "Nostaljik",
-      emotionPercentage: 74,
-      theme: "Yalnızlık",
-      retentionDays: 25,
-      demographics: "30-45 Yaş"
-    }
+      readingHours: "21:00 - 02:00",
+      emotion: "Gizemli",
+      emotionPercentage: 78,
+      theme: "Tarih ve Cinayet",
+      retentionDays: 14,
+      demographics: "20-55 Yaş"
+    },
+    storyLocations: [
+      { lat: 41.0150, lng: 28.9850, name: "Sarayburnu (Atatürk Anıtı)", description: "İlk cesedin bulunduğu ve antik Byzas dönemini temsil eden sikkenin avuca bırakıldığı nokta." },
+      { lat: 41.0085, lng: 28.9715, name: "Çemberlitaş Sütunu", description: "İkinci cinayet mahalli; Konstantin dönemine ait sırların ve ikinci sikkenin bulunduğu tarihi sütun." },
+      { lat: 40.9930, lng: 28.9220, name: "Yedikule Zindanları", description: "Bizans'ın efsanevi Altın Kapı'sı ve cinayet serisinin karanlık duraklarından biri." }
+    ]
   }
 ];
 

@@ -4,7 +4,7 @@ import { useStore } from '../store/useStore';
 import { ChevronLeft, MapPin, Award, BookOpen, Check } from 'lucide-react';
 
 export const PublicProfile: React.FC = () => {
-  const { viewedUser, books, setActiveTab, requestSwap, requestedSwaps } = useStore();
+  const { viewedUser, books, setActiveTab, goBack, requestSwap, requestedSwaps } = useStore();
 
   if (!viewedUser) {
     return (
@@ -45,7 +45,7 @@ export const PublicProfile: React.FC = () => {
     >
       <header className="p-4 flex items-center justify-between relative z-10">
         <button 
-          onClick={() => setActiveTab('discovery')}
+          onClick={() => goBack()}
           className="p-2 bg-white rounded-full shadow-sm text-ink/60 hover:text-ink transition-colors"
         >
           <ChevronLeft size={24} />

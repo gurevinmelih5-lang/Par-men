@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, QrCode, X, CheckCircle2, Flame, Map } from 'lucide-react';
+import { MapPin, QrCode, X, CheckCircle2, Flame, Map, Compass, BookOpen } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useStore } from '../store/useStore';
 import { SwapTableModal } from '../components/SwapTableModal';
-import { MapContainer, TileLayer, Marker, Circle } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Circle, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -30,7 +30,44 @@ export const Swap: React.FC = () => {
   const [showQR, setShowQR] = useState(false);
   const [showSwapTable, setShowSwapTable] = useState(false);
   const [isSwapping, setIsSwapping] = useState(false);
-  const [mapMode, setMapMode] = useState<'swap' | 'literary'>('swap');
+  const [mapMode, setMapMode] = useState<'swap' | 'literary' | 'atlas'>('swap');
+  const [selectedAtlasLocation, setSelectedAtlasLocation] = useState<{ bookId: string; location: any } | null>(null);
+  const [nearbyLocation, setNearbyLocation] = useState<{ bookTitle: string; location: any } | null>(null);
+
+  // Haversine formula
+  const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371; // km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+
+  React.useEffect(() => {
+    if (user.lat && user.lng) {
+      let closest: any = null;
+      let minDistance = 1.0; // 1km threshold
+
+      books.forEach(book => {
+        if (book.storyLocations) {
+          book.storyLocations.forEach(loc => {
+            const dist = getDistance(user.lat!, user.lng!, loc.lat, loc.lng);
+            if (dist < minDistance) {
+              minDistance = dist;
+              closest = { bookTitle: book.title, location: loc };
+            }
+          });
+        }
+      });
+
+      if (closest) {
+        setNearbyLocation(closest);
+      }
+    }
+  }, [user.lat, user.lng, books]);
 
   const otherBooks = books.filter(b => b.ownerId !== user.id);
 
@@ -101,25 +138,62 @@ export const Swap: React.FC = () => {
   };
 
   return (
-    <motion.div className="p-6 space-y-6" variants={container} initial="hidden" animate="show">
+    <motion.div className="p-6 pb-28 space-y-6" variants={container} initial="hidden" animate="show">
       <motion.header variants={item}>
         <h1 className="text-3xl font-serif text-ink tracking-tight">Hiper-Lokal Takas</h1>
         <p className="text-ink/60 mt-2 font-sans text-sm">Yakınındaki güvenli buluşma noktalarında takas yap.</p>
       </motion.header>
 
+      {/* Proximity Alert */}
+      <AnimatePresence>
+        {nearbyLocation && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="bg-indigo-600 text-white p-4 rounded-2xl shadow-xl flex gap-3 items-start relative overflow-hidden"
+          >
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-400 to-pink-500"></div>
+            <div className="p-2 bg-white/20 rounded-full flex-shrink-0 mt-1">
+              <Compass size={20} className="animate-pulse" />
+            </div>
+            <div>
+              <p className="text-sm font-bold flex items-center gap-1">
+                📍 Yakınlarda Bir Hikaye Var!
+              </p>
+              <p className="text-xs text-indigo-100 mt-1">
+                Şu an <strong>{nearbyLocation.bookTitle}</strong> romanındaki <strong>{nearbyLocation.location.name}</strong> noktasına çok yakınsın.
+              </p>
+              <p className="text-[10px] text-indigo-200 mt-2 italic">
+                "{nearbyLocation.location.description}"
+              </p>
+            </div>
+            <button onClick={() => setNearbyLocation(null)} className="absolute top-2 right-2 text-indigo-200 hover:text-white">
+              <X size={16} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Map Mode Toggle */}
-      <motion.div variants={item} className="flex p-1 bg-parchment-dark/40 rounded-2xl">
+      <motion.div variants={item} className="flex p-1 bg-parchment-dark/40 rounded-2xl overflow-x-auto snap-x hide-scrollbar">
         <button
           onClick={() => setMapMode('swap')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${mapMode === 'swap' ? 'bg-ink text-parchment-light shadow-md' : 'text-ink/60 hover:text-ink'}`}
+          className={`flex-1 min-w-[110px] flex items-center justify-center gap-2 py-2.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all duration-300 snap-center ${mapMode === 'swap' ? 'bg-ink text-parchment-light shadow-md' : 'text-ink/60 hover:text-ink'}`}
         >
-          <MapPin size={16} /> Takas Noktaları
+          <MapPin size={16} /> Noktalar
         </button>
         <button
           onClick={() => setMapMode('literary')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${mapMode === 'literary' ? 'bg-ink text-parchment-light shadow-md' : 'text-ink/60 hover:text-ink'}`}
+          className={`flex-1 min-w-[110px] flex items-center justify-center gap-2 py-2.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all duration-300 snap-center ${mapMode === 'literary' ? 'bg-ink text-parchment-light shadow-md' : 'text-ink/60 hover:text-ink'}`}
         >
           <Map size={16} /> Edebi Harita
+        </button>
+        <button
+          onClick={() => setMapMode('atlas')}
+          className={`flex-1 min-w-[110px] flex items-center justify-center gap-2 py-2.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all duration-300 snap-center ${mapMode === 'atlas' ? 'bg-ink text-parchment-light shadow-md' : 'text-ink/60 hover:text-ink'}`}
+        >
+          <Compass size={16} /> Gezgin
         </button>
       </motion.div>
 
@@ -158,6 +232,24 @@ export const Swap: React.FC = () => {
             <div>
               <p className="text-xs font-bold text-ink">Efsanevi Kitap Haritada!</p>
               <p className="text-[10px] text-ink/60">Altın parlayan pin efsanevi bir kitabı işaret ediyor. Peşine düş!</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Atlas mode notification */}
+      <AnimatePresence>
+        {mapMode === 'atlas' && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex items-center gap-3 bg-gradient-to-r from-purple-500/20 to-purple-500/5 border border-purple-500/30 rounded-2xl p-3"
+          >
+            <div className="w-9 h-9 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-600 flex-shrink-0"><Compass size={18} /></div>
+            <div>
+              <p className="text-xs font-bold text-ink">Kitap Gezgini Modu Aktif</p>
+              <p className="text-[10px] text-ink/60">Şu an bulunduğun sokağın kurgusal tarihini keşfet!</p>
             </div>
           </motion.div>
         )}
@@ -217,8 +309,78 @@ export const Swap: React.FC = () => {
               />
             </React.Fragment>
           ))}
+
+          {/* Atlas mode: story location markers and paths */}
+          {mapMode === 'atlas' && books.map(book => {
+            if (!book.storyLocations || book.storyLocations.length === 0) return null;
+            
+            const positions: [number, number][] = book.storyLocations.map(loc => [loc.lat, loc.lng]);
+
+            return (
+              <React.Fragment key={`path-${book.id}`}>
+                {positions.length > 1 && (
+                  <Polyline 
+                    positions={positions} 
+                    pathOptions={{ color: '#8B5CF6', weight: 2, dashArray: '4, 8', opacity: 0.6 }} 
+                  />
+                )}
+                {book.storyLocations.map((loc, index) => (
+                  <Marker
+                    key={`${book.id}-${index}`}
+                    position={[loc.lat, loc.lng]}
+                    eventHandlers={{ click: () => setSelectedAtlasLocation({ bookId: book.id, location: loc }) }}
+                    icon={L.divIcon({
+                      className: 'atlas-marker',
+                      html: `<div style="padding: 6px; background: #8B5CF6; color: white; border-radius: 50%; box-shadow: 0 0 10px rgba(139,92,246,0.8); transform: scale(${selectedAtlasLocation?.location.name === loc.name ? '1.2' : '1'}); transition: all 0.3s; display: flex; align-items: center; justify-content: center; position: relative;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                        <div style="position:absolute; top:-6px; right:-6px; background: white; color: #8B5CF6; width:14px; height:14px; border-radius:50%; font-size:10px; font-weight:bold; display:flex; align-items:center; justify-content:center; border: 1px solid #8B5CF6;">${index + 1}</div>
+                      </div>`,
+                      iconSize: [32, 32],
+                      iconAnchor: [16, 32],
+                    })}
+                  />
+                ))}
+              </React.Fragment>
+            );
+          })}
         </MapContainer>
       </motion.section>
+
+      {/* Selected Atlas Location Panel */}
+      <AnimatePresence>
+        {mapMode === 'atlas' && selectedAtlasLocation && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-20 left-4 right-4 p-4 rounded-2xl shadow-xl z-40 bg-white border border-ink/5"
+          >
+            <div className="flex flex-col">
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-purple-100 text-purple-600 rounded-xl"><BookOpen size={20} /></div>
+                  <div>
+                    <h3 className="font-serif font-bold text-lg leading-tight text-ink">{selectedAtlasLocation.location.name}</h3>
+                    <p className="text-xs font-bold text-ink/60 mt-0.5">{books.find(b => b.id === selectedAtlasLocation.bookId)?.title}</p>
+                  </div>
+                </div>
+                <button onClick={() => setSelectedAtlasLocation(null)} className="text-ink/40 hover:text-ink">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="bg-parchment-dark/50 p-4 rounded-xl border border-parchment-dark relative">
+                <p className="text-sm italic text-ink/90">
+                  "{selectedAtlasLocation.location.description}"
+                </p>
+                <div className="mt-3 flex items-center justify-between border-t border-ink/10 pt-3">
+                    <p className="text-[10px] font-bold text-purple-600 uppercase tracking-widest flex items-center gap-1"><Compass size={12}/> Kurgusal Mekan</p>
+                    <p className="text-[10px] font-bold text-ink/40">Parşömen YZ</p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Selected Book Card Panel */}
       <AnimatePresence>

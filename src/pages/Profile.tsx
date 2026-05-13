@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, PolarRadiusAxis } from 'recharts';
 import { useStore } from '../store/useStore';
-import { Shield, BookOpen, MessageSquare, Award, Plus, MapPin, Edit2, Trash2, Moon, Sun, Camera, ArrowRightLeft, Clock, X, Users, ChevronRight, CheckCircle, XCircle } from 'lucide-react';
+import { Shield, BookOpen, MessageSquare, Award, Plus, MapPin, Edit2, Trash2, Moon, Sun, Camera, ArrowRightLeft, Clock, X, Users, ChevronRight, CheckCircle, XCircle, HelpCircle } from 'lucide-react';
 import { AddBookModal } from '../components/AddBookModal';
 import { EditBookModal } from '../components/EditBookModal';
+import { UserManual } from '../components/UserManual';
 import { getCurrentLocation } from '../lib/location';
 import imageCompression from 'browser-image-compression';
 
@@ -17,6 +18,7 @@ export const Profile: React.FC = () => {
     b => requestedSwaps.includes(b.id) && !cancelledSwaps.includes(b.id)
   );
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);
+  const [isManualOpen, setIsManualOpen] = useState(false);
   const [editingBook, setEditingBook] = useState<any>(null);
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -88,7 +90,7 @@ export const Profile: React.FC = () => {
 
   return (
     <motion.div 
-      className="p-6 space-y-8"
+      className="p-6 pb-28 space-y-8"
       variants={container}
       initial="hidden"
       animate="show"
@@ -115,7 +117,14 @@ export const Profile: React.FC = () => {
               className="flex items-center gap-1 text-[10px] bg-white border border-ink/10 px-2 py-1 rounded-full font-bold text-ink/70 hover:bg-parchment transition-colors active:scale-95"
             >
               <MapPin size={12} className={isUpdatingLocation ? "animate-bounce text-karma" : ""} />
-              {isUpdatingLocation ? 'Alınıyor...' : (user.lat ? 'Konumu Güncelle' : 'Konum Ekle')}
+              {isUpdatingLocation ? 'Alınıyor...' : (user.lat ? 'Konum' : 'Konum Ekle')}
+            </button>
+            <button 
+              onClick={() => setIsManualOpen(true)}
+              className="flex items-center gap-1 text-[10px] bg-white border border-ink/10 px-2 py-1 rounded-full font-bold text-ink/70 hover:bg-parchment transition-colors active:scale-95"
+            >
+              <HelpCircle size={12} />
+              Rehber
             </button>
           </div>
         </div>
@@ -437,6 +446,7 @@ export const Profile: React.FC = () => {
 
       <AddBookModal isOpen={isBookModalOpen} onClose={() => setIsBookModalOpen(false)} />
       <EditBookModal isOpen={!!editingBook} onClose={() => setEditingBook(null)} book={editingBook} />
+      <UserManual isOpen={isManualOpen} onClose={() => setIsManualOpen(false)} />
     </motion.div>
   );
 };

@@ -7,16 +7,19 @@ import { Swap } from './pages/Swap';
 import { Profile } from './pages/Profile';
 import { BookDetail } from './pages/BookDetail';
 import { PublicProfile } from './pages/PublicProfile';
+import { SwapChat } from './pages/SwapChat';
 import { Auth } from './pages/Auth';
 import { AnimatePresence, motion } from 'framer-motion';
 import { supabase } from './lib/supabase';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from './components/ThemeProvider';
+import { Onboarding, useOnboarding } from './components/Onboarding';
 
 function App() {
   const { activeTab } = useStore();
   const [session, setSession] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
+  const { showOnboarding, completeOnboarding } = useOnboarding();
 
   React.useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -58,20 +61,14 @@ function App() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'dashboard':
-        return <Dashboard />;
-      case 'discovery':
-        return <Discovery />;
-      case 'swap':
-        return <Swap />;
-      case 'profile':
-        return <Profile />;
-      case 'bookDetail':
-        return <BookDetail />;
-      case 'publicProfile':
-        return <PublicProfile />;
-      default:
-        return <Dashboard />;
+      case 'dashboard': return <Dashboard />;
+      case 'discovery': return <Discovery />;
+      case 'swap': return <Swap />;
+      case 'profile': return <Profile />;
+      case 'bookDetail': return <BookDetail />;
+      case 'publicProfile': return <PublicProfile />;
+      case 'chat': return <SwapChat />;
+      default: return <Dashboard />;
     }
   };
 
@@ -86,6 +83,7 @@ function App() {
   return (
     <ThemeProvider>
       <Toaster position="top-center" toastOptions={{ duration: 3000, style: { borderRadius: '16px', background: '#333', color: '#fff' } }} />
+      {showOnboarding && <Onboarding onComplete={completeOnboarding} />}
       <Layout>
         <AnimatePresence mode="wait">
           <motion.div

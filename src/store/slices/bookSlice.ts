@@ -277,6 +277,9 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
   respondToSwapRequest: async (requestId, accept) => {
     try {
       const newStatus = accept ? 'accepted' : 'rejected';
+      const { incomingRequests, books } = get();
+      const req = incomingRequests.find(r => r.id === requestId);
+
       const { error } = await supabase
         .from('swap_requests')
         .update({ status: newStatus })
@@ -288,7 +291,33 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
         incomingRequests: state.incomingRequests.filter(r => r.id !== requestId)
       }));
 
-      toast.success(accept ? 'Takas isteği kabul edildi!' : 'Takas isteği reddedildi.');
+      if (accept && req) {
+        // Transfer book ownership to requester in local state
+        set(state => ({
+          books: state.books.map(b =>
+            b.id === req.bookId
+              ? { ...b, ownerId: req.requesterId }
+              : b
+          ),
+          requestedSwaps: state.requestedSwaps.filter(id => id !== req.bookId),
+        }));
+
+        // Open swap chat
+        const swappedBook = books.find(b => b.id === req.bookId);
+        const { setActiveSwapChat, setActiveTab } = (get() as any);
+        setActiveSwapChat({
+          swapId: requestId,
+          otherUserId: req.requesterId,
+          otherUserName: req.requesterName,
+          otherUserAvatar: req.requesterAvatar,
+          bookTitle: req.bookTitle,
+          bookCover: swappedBook?.cover || '',
+        });
+        setActiveTab('chat');
+        toast.success('Takas kabul edildi! Sohbet ekranı açılıyor...');
+      } else {
+        toast.success(accept ? 'Takas isteği kabul edildi!' : 'Takas isteği reddedildi.');
+      }
     } catch (error) {
       console.error('Error responding to swap request:', error);
       toast.error('İşlem başarısız.');
