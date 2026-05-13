@@ -66,7 +66,10 @@ export interface Book {
     lat: number;
     lng: number;
     name: string;
+    /** Mekânın kısa tanımı; haritada alıntı kartında gösterilir */
     description: string;
+    /** Örn. "Ankara sahneleri" — «…» kitabında geçen … cümlesini tamamlar */
+    sceneLabel?: string;
   }[];
 }
 
@@ -169,9 +172,9 @@ export const mockBooks: Book[] = [
     },
     isLegendary: true,
     storyLocations: [
-      { lat: 41.0312, lng: 28.9808, name: "Merhamet Apartmanı", description: "Kemal ve Füsun'un ilk gizli buluşmalarını gerçekleştirdikleri, hikayenin kalbinin attığı Teşvikiye'deki o meşhur apartman." },
-      { lat: 41.0314, lng: 28.9796, name: "Masumiyet Müzesi (Çukurcuma)", description: "Füsun'un ailesiyle yaşadığı ve Kemal'in yıllarca her akşam ziyarete giderek topladığı eşyaları sergilediği gerçek müze binası." },
-      { lat: 41.0500, lng: 28.9950, name: "Şanzelize Butik", description: "Füsun'un tezgahtar olarak çalıştığı ve Kemal'in ona ilk kez vurulduğu Nişantaşı'ndaki lüks butik." }
+      { lat: 41.0312, lng: 28.9808, name: "Merhamet Apartmanı", sceneLabel: "Nişantaşı ve Teşvikiye sahneleri", description: "“Bütün bunların bir masumiyet müzesi olacağını o zaman bilmiyordum.” — Kemal'in apartman kapısından içeri adım attığı anların yankısı." },
+      { lat: 41.0314, lng: 28.9796, name: "Masumiyet Müzesi (Çukurcuma)", sceneLabel: "Nişantaşı ve Teşvikiye sahneleri", description: "“Füsun'un eşyaları arasında gezinirken zamanın durduğunu hissediyordum.” — Müzenin kurulduğu çatı katı ve toplanan nesneler." },
+      { lat: 41.0500, lng: 28.9950, name: "Şanzelize Butik", sceneLabel: "Nişantaşı ve Teşvikiye sahneleri", description: "“İlk gördüğüm anda anlamıştım; bu kız benim kaderimdi.” — Şanzelize vitrininin önündeki ilk bakışma." }
     ]
   },
   {
@@ -204,9 +207,9 @@ export const mockBooks: Book[] = [
       demographics: "18-40 Yaş"
     },
     storyLocations: [
-      { lat: 41.0084, lng: 28.9779, name: "Yerebatan Sarnıcı", description: "Veba virüsünün suya karıştırılmak istendiği ve Langdon'ın suların içindeki Medusa başını aradığı karanlık sarnıç." },
-      { lat: 41.0086, lng: 28.9802, name: "Ayasofya", description: "Dandolo'nun mezarının bulunduğu ve şifrelerin ilk kırılmaya başlandığı tarihi mabet." },
-      { lat: 41.0165, lng: 28.9705, name: "Mısır Çarşısı", description: "Kovalamacanın İstanbul sokaklarında labirente dönüştüğü baharat kokulu tarihi çarşı." }
+      { lat: 41.0084, lng: 28.9779, name: "Yerebatan Sarnıcı", sceneLabel: "Sultanahmet ve tarihi yarımada sahneleri", description: "“Su yükselirken Medusa'nın gözleri bizi izliyordu.” — Sarnıçtaki suyun üstünde yankılanan gerilim." },
+      { lat: 41.0086, lng: 28.9802, name: "Ayasofya", sceneLabel: "Sultanahmet ve tarihi yarımada sahneleri", description: "“Bin beş yüz yıllık taşların arasında şifre gizliydi.” — Ayasofya kubbesinin altında nefes kesilen kovalamaca." },
+      { lat: 41.0165, lng: 28.9705, name: "Mısır Çarşısı", sceneLabel: "Eminönü sahneleri", description: "“Baharat kokusu arasında iz kayboluyordu.” — Çarşı aralarında nefes nefese geçen kaçış." }
     ]
   },
   {
@@ -233,9 +236,28 @@ export const mockBooks: Book[] = [
       demographics: "20-55 Yaş"
     },
     storyLocations: [
-      { lat: 41.0150, lng: 28.9850, name: "Sarayburnu (Atatürk Anıtı)", description: "İlk cesedin bulunduğu ve antik Byzas dönemini temsil eden sikkenin avuca bırakıldığı nokta." },
-      { lat: 41.0085, lng: 28.9715, name: "Çemberlitaş Sütunu", description: "İkinci cinayet mahalli; Konstantin dönemine ait sırların ve ikinci sikkenin bulunduğu tarihi sütun." },
-      { lat: 40.9930, lng: 28.9220, name: "Yedikule Zindanları", description: "Bizans'ın efsanevi Altın Kapı'sı ve cinayet serisinin karanlık duraklarından biri." }
+      { lat: 41.0150, lng: 28.9850, name: "Sarayburnu (Atatürk Anıtı)", sceneLabel: "Sarayburnu ve deniz kenarı sahneleri", description: "“İlk sikke avucuma düştüğünde İstanbul'un bana fısıldadığını duydum.” — Sarayburnu'nda gün doğumu ve cinayetin gölgesi." },
+      { lat: 41.0085, lng: 28.9715, name: "Çemberlitaş Sütunu", sceneLabel: "Fatih ve Çemberlitaş sahneleri", description: "“Tarih bazen bir sütunun gölgesinde cinayet yazar.” — İkinci sikkenin ortaya çıktığı an." },
+      { lat: 40.9930, lng: 28.9220, name: "Yedikule Zindanları", sceneLabel: "Yedikule ve sur sahneleri", description: "“Altın Kapı'nın ardında karanlık bekliyordu.” — Zindan merdivenlerinde yükselen gerilim." }
+    ]
+  },
+  {
+    id: 'b4',
+    title: 'Bekle Beni',
+    author: 'Livaneli',
+    cover: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=400',
+    condition: 'Good',
+    pace: 'Medium',
+    depth: 'Medium',
+    ownerId: 'u3',
+    distance: 120,
+    lat: 39.9208,
+    lng: 32.8541,
+    lineage: [{ city: 'Ankara', date: 'Haziran 2025', ownerName: 'Elif D.' }],
+    storyLocations: [
+      { lat: 39.9334, lng: 32.8597, name: "Kızılay", sceneLabel: "Ankara sahneleri", description: "“Başkentin kalbinde ayrılık ve umut aynı kaldırımı paylaşıyordu.” — Kızılay kalabalığında bekleyiş." },
+      { lat: 39.9458, lng: 32.8361, name: "Anıtkabir", sceneLabel: "Ankara sahneleri", description: "“Merdivenleri çıkarken geçmiş omzuma dokundu.” — Aslanlı Yol'da duran sessizlik." },
+      { lat: 39.9147, lng: 32.8408, name: "Hamamönü", sceneLabel: "Ankara sahneleri", description: "“Eski taş evler arasında çocukluğum geri geldi.” — Dar sokaklarda gece yürüyüşü." }
     ]
   }
 ];

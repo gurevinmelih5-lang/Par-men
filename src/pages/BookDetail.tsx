@@ -6,7 +6,9 @@ import { useStore } from '../store/useStore';
 import { AddScriptumModal } from '../components/AddScriptumModal';
 
 export const BookDetail: React.FC = () => {
-  const { books, scriptums, setActiveTab, goBack, user, selectedBookId } = useStore();
+  const { books, scriptums, setActiveTab, goBack, user, selectedBookId, voteDuel } = useStore();
+  const [duelVoteLocked, setDuelVoteLocked] = useState<Record<string, true>>({});
+  const duelVotedRef = React.useRef<Set<string>>(new Set());
 
   const handleShare = async (title: string, author: string) => {
     const text = `"${title}" – ${author} | Parşömen'de keşfet!`;
@@ -360,10 +362,30 @@ export const BookDetail: React.FC = () => {
                           "{scriptum.duel.argument}"
                         </p>
                         <div className="flex gap-2">
-                          <button className="flex-1 flex items-center justify-center gap-1 bg-white border border-ink/10 py-1.5 rounded-lg text-[10px] font-bold text-ink hover:bg-karma/10 transition-colors">
+                          <button
+                            type="button"
+                            disabled={!!duelVoteLocked[scriptum.id]}
+                            onClick={() => {
+                              if (duelVotedRef.current.has(scriptum.id)) return;
+                              duelVotedRef.current.add(scriptum.id);
+                              voteDuel(scriptum.id, true);
+                              setDuelVoteLocked((prev) => ({ ...prev, [scriptum.id]: true }));
+                            }}
+                            className="flex-1 min-h-[44px] flex items-center justify-center gap-1 bg-white border border-ink/10 py-2 rounded-lg text-[10px] font-bold text-ink hover:bg-karma/10 transition-colors disabled:opacity-50 touch-manipulation"
+                          >
                             <ThumbsUp size={12} /> Haklı ({scriptum.duel.support})
                           </button>
-                          <button className="flex-1 flex items-center justify-center gap-1 bg-white border border-ink/10 py-1.5 rounded-lg text-[10px] font-bold text-ink hover:bg-red-500/10 transition-colors">
+                          <button
+                            type="button"
+                            disabled={!!duelVoteLocked[scriptum.id]}
+                            onClick={() => {
+                              if (duelVotedRef.current.has(scriptum.id)) return;
+                              duelVotedRef.current.add(scriptum.id);
+                              voteDuel(scriptum.id, false);
+                              setDuelVoteLocked((prev) => ({ ...prev, [scriptum.id]: true }));
+                            }}
+                            className="flex-1 min-h-[44px] flex items-center justify-center gap-1 bg-white border border-ink/10 py-2 rounded-lg text-[10px] font-bold text-ink hover:bg-red-500/10 transition-colors disabled:opacity-50 touch-manipulation"
+                          >
                             <ThumbsDown size={12} /> Hatalı ({scriptum.duel.oppose})
                           </button>
                         </div>

@@ -1,7 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft, Send, BookOpen, CheckCheck } from 'lucide-react';
+import { ChevronLeft, Send, BookOpen, CheckCheck, Ban } from 'lucide-react';
 import { useStore } from '../store/useStore';
+import { supabase } from '../lib/supabase';
+import toast from 'react-hot-toast';
 
 interface Message {
   id: string;
@@ -11,23 +13,121 @@ interface Message {
   read: boolean;
 }
 
+/** swap_messages satırı (Supabase) */
+interface SwapMessageRow {
+  id: string;
+  sender_id: string;
+  body: string;
+  created_at: string;
+}
+
+function formatMsgTime(iso: string) {
+  try {
+    return new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '';
+  }
+}
+
 export const SwapChat: React.FC = () => {
-  const { user, activeSwapChat, setActiveTab, setActiveSwapChat } = useStore();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'sys-1',
-      senderId: 'system',
-      text: `🎉 Takas onaylandı! "${activeSwapChat?.bookTitle}" kitabı için buluşma yerini ve zamanını konuşabilirsiniz.`,
-      timestamp: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-      read: true,
-    },
-  ]);
+  const {
+    user,
+    activeSwapChat,
+    goBack,
+    endSwapChat,
+    setActiveTab,
+  } = useStore();
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  const swapId = activeSwapChat?.swapId;
+  const chatEnded = Boolean(activeSwapChat?.chatEndedBy);
+  const endedByMe = activeSwapChat?.chatEndedBy === user.id;
+
+  const loadMessages = useCallback(async () => {
+    if (!swapId) return;
+    const { data, error } = await supabase
+      .from('swap_messages')
+      .select('id, sender_id, body, created_at')
+      .eq('swap_request_id', swapId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+    setMessages(
+      (data as SwapMessageRow[] | null)?.map((m) => ({
+        id: m.id,
+        senderId: m.sender_id,
+        text: m.body,
+        timestamp: formatMsgTime(m.created_at),
+        read: true,
+      })) ?? []
+    );
+  }, [swapId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  useEffect(() => {
+    if (!swapId) return;
+
+    const loadTimer = window.setTimeout(() => {
+      void loadMessages();
+    }, 0);
+
+    const channel = supabase
+      .channel(`swap-chat-${swapId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'swap_messages',
+          filter: `swap_request_id=eq.${swapId}`,
+        },
+        (payload) => {
+          const m = payload.new as SwapMessageRow;
+          setMessages((prev) => {
+            if (prev.some((x) => x.id === m.id)) return prev;
+            return [
+              ...prev,
+              {
+                id: m.id,
+                senderId: m.sender_id,
+                text: m.body,
+                timestamp: formatMsgTime(m.created_at),
+                read: true,
+              },
+            ];
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'swap_requests',
+          filter: `id=eq.${swapId}`,
+        },
+        (payload) => {
+          const row = payload.new as { chat_ended_by?: string | null };
+          if (row.chat_ended_by) {
+            void useStore.getState().openSwapChatById(swapId, { goToChatTab: false });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      window.clearTimeout(loadTimer);
+      void supabase.removeChannel(channel);
+    };
+  }, [swapId, loadMessages]);
 
   if (!activeSwapChat) {
     return (
@@ -43,50 +143,66 @@ export const SwapChat: React.FC = () => {
     );
   }
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    const msg: Message = {
-      id: `msg-${Date.now()}`,
-      senderId: user.id,
-      text: input.trim(),
-      timestamp: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-      read: false,
-    };
-    setMessages(prev => [...prev, msg]);
+  const handleSend = async () => {
+    if (!input.trim() || !swapId || chatEnded) return;
+    const text = input.trim();
     setInput('');
 
-    // Simulated auto-reply after 1.5s
-    setTimeout(() => {
-      const replies = [
-        'Harika! Yarin ogleden sonra Kadikoy Iskele\u2019de bulusalim mi?',
-        'Tamam, uygun olur. Saat kacta?',
-        'Kitabin cok iyi durumda oldugunu gordum, tesekkurler!',
-        'Peki saat 15:00 Moda Sahili olabilir mi?',
-      ];
-      const reply: Message = {
-        id: `msg-${Date.now() + 1}`,
-        senderId: activeSwapChat.otherUserId,
-        text: replies[Math.floor(Math.random() * replies.length)],
-        timestamp: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-        read: false,
-      };
-      setMessages(prev => [...prev, reply]);
-    }, 1500);
+    const { data, error } = await supabase
+      .from('swap_messages')
+      .insert({
+        swap_request_id: swapId,
+        sender_id: user.id,
+        body: text,
+      })
+      .select('id, sender_id, body, created_at')
+      .single();
+
+    if (error) {
+      console.error(error);
+      toast.error('Mesaj gönderilemedi. swap_chat_extension.sql ile tabloları oluşturduğunuzdan emin olun.');
+      setInput(text);
+      return;
+    }
+
+    if (data) {
+      const m = data as SwapMessageRow;
+      setMessages((prev) => {
+        if (prev.some((x) => x.id === m.id)) return prev;
+        return [
+          ...prev,
+          {
+            id: m.id,
+            senderId: m.sender_id,
+            text: m.body,
+            timestamp: formatMsgTime(m.created_at),
+            read: true,
+          },
+        ];
+      });
+    }
+  };
+
+  const handleEndChat = async () => {
+    if (!swapId || chatEnded) return;
+    if (!window.confirm('Sohbeti sonlandırmak istediğinize emin misiniz? Karşı taraf da yazamayacaktır.')) return;
+    await endSwapChat(swapId);
   };
 
   return (
-    <div className="flex flex-col h-screen bg-parchment-light">
-      {/* Header */}
-      <header className="flex items-center gap-3 p-4 border-b border-ink/10 bg-white shadow-sm z-10">
+    <div className="flex flex-col min-h-[100dvh] bg-parchment-light">
+      <header className="flex items-center gap-2 p-3 border-b border-ink/10 bg-white shadow-sm z-10 flex-shrink-0">
         <button
-          onClick={() => { setActiveSwapChat(null); setActiveTab('profile'); }}
+          type="button"
+          onClick={() => goBack()}
           className="p-2 rounded-full hover:bg-parchment-light transition-colors text-ink/60"
+          aria-label="Geri"
         >
           <ChevronLeft size={22} />
         </button>
 
         <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-karma/40 flex-shrink-0">
-          <img src={activeSwapChat.otherUserAvatar} alt={activeSwapChat.otherUserName} className="w-full h-full object-cover" />
+          <img src={activeSwapChat.otherUserAvatar} alt="" className="w-full h-full object-cover" />
         </div>
 
         <div className="flex-grow min-w-0">
@@ -96,36 +212,43 @@ export const SwapChat: React.FC = () => {
           </p>
         </div>
 
-        {/* Book mini cover */}
         {activeSwapChat.bookCover && (
           <div className="w-9 h-12 rounded-lg overflow-hidden bg-parchment-dark flex-shrink-0 shadow-md border border-ink/10">
-            <img src={activeSwapChat.bookCover} alt={activeSwapChat.bookTitle} className="w-full h-full object-cover" />
+            <img src={activeSwapChat.bookCover} alt="" className="w-full h-full object-cover" />
           </div>
         )}
+
+        <button
+          type="button"
+          onClick={handleEndChat}
+          disabled={chatEnded}
+          className="p-2 rounded-full text-red-600/90 hover:bg-red-50 disabled:opacity-30 transition-colors flex-shrink-0"
+          title="Sohbeti sonlandır"
+          aria-label="Sohbeti sonlandır"
+        >
+          <Ban size={20} />
+        </button>
       </header>
 
-      {/* Swap confirmed banner */}
-      <div className="bg-green-50 border-b border-green-200 px-4 py-2 flex items-center gap-2">
-        <span className="text-green-600 text-xs font-bold">✓ Takas Onaylandı</span>
-        <span className="text-[10px] text-green-500">— Buluşma yerini ve saatini belirleyin</span>
+      <div className="bg-green-50 border-b border-green-200 px-4 py-2 flex-shrink-0">
+        <span className="text-green-700 text-xs font-bold">✓ Takas onaylandı</span>
+        <span className="text-[10px] text-green-600 ml-2">— Buluşma için yalnızca karşı tarafınızla yazışın</span>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+      {chatEnded && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-[11px] text-amber-900 flex-shrink-0">
+          {endedByMe
+            ? 'Bu sohbeti siz sonlandırdınız.'
+            : 'Karşı taraf sohbeti sonlandırdı. Yeni mesaj gönderilemez.'}
+        </div>
+      )}
+
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-0">
+        {messages.length === 0 && !chatEnded && (
+          <p className="text-center text-xs text-ink/45 py-8">Henüz mesaj yok. Buluşma yeri ve saati için yazın.</p>
+        )}
         {messages.map((msg) => {
           const isMe = msg.senderId === user.id;
-          const isSystem = msg.senderId === 'system';
-
-          if (isSystem) {
-            return (
-              <div key={msg.id} className="flex justify-center">
-                <div className="bg-karma/10 border border-karma/20 text-ink/70 text-xs px-4 py-2 rounded-2xl max-w-xs text-center leading-relaxed">
-                  {msg.text}
-                </div>
-              </div>
-            );
-          }
-
           return (
             <motion.div
               key={msg.id}
@@ -136,15 +259,17 @@ export const SwapChat: React.FC = () => {
               {!isMe && (
                 <img
                   src={activeSwapChat.otherUserAvatar}
-                  alt={activeSwapChat.otherUserName}
+                  alt=""
                   className="w-7 h-7 rounded-full object-cover flex-shrink-0 mb-0.5"
                 />
               )}
-              <div className={`max-w-[72%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                isMe
-                  ? 'bg-ink text-parchment-light rounded-br-sm'
-                  : 'bg-white text-ink border border-ink/5 shadow-sm rounded-bl-sm'
-              }`}>
+              <div
+                className={`max-w-[72%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                  isMe
+                    ? 'bg-ink text-parchment-light rounded-br-sm'
+                    : 'bg-white text-ink border border-ink/5 shadow-sm rounded-bl-sm'
+                }`}
+              >
                 <p>{msg.text}</p>
                 <p className={`text-[9px] mt-1 text-right ${isMe ? 'text-parchment-light/50' : 'text-ink/30'}`}>
                   {msg.timestamp}
@@ -157,21 +282,23 @@ export const SwapChat: React.FC = () => {
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
-      <div className="p-4 border-t border-ink/10 bg-white">
+      <div className="p-4 border-t border-ink/10 bg-white flex-shrink-0 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
         <div className="flex items-center gap-3 bg-parchment-light rounded-2xl px-4 py-2 border border-ink/10">
           <input
             type="text"
             value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleSend()}
-            placeholder="Mesaj yaz..."
-            className="flex-1 bg-transparent outline-none text-sm text-ink placeholder:text-ink/30 font-medium"
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            placeholder={chatEnded ? 'Sohbet kapalı' : 'Mesaj yaz...'}
+            disabled={chatEnded}
+            className="flex-1 bg-transparent outline-none text-sm text-ink placeholder:text-ink/30 font-medium disabled:opacity-50"
           />
           <button
+            type="button"
             onClick={handleSend}
-            disabled={!input.trim()}
+            disabled={!input.trim() || chatEnded}
             className="w-9 h-9 rounded-xl bg-ink text-parchment-light flex items-center justify-center disabled:opacity-30 transition-all active:scale-95 shadow-sm"
+            aria-label="Gönder"
           >
             <Send size={16} />
           </button>

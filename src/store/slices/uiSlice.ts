@@ -2,16 +2,21 @@ import type { StateCreator } from 'zustand';
 
 export interface SwapChat {
   swapId: string;
+  bookId: string;
+  ownerId: string;
+  requesterId: string;
   otherUserId: string;
   otherUserName: string;
   otherUserAvatar: string;
   bookTitle: string;
   bookCover: string;
+  /** Sohbeti hangi kullanıcı sonlandırdı (varsa) */
+  chatEndedBy?: string | null;
 }
 
 export interface UISlice {
-  activeTab: 'dashboard' | 'discovery' | 'swap' | 'profile' | 'bookDetail' | 'publicProfile' | 'chat';
-  tabHistory: ('dashboard' | 'discovery' | 'swap' | 'profile' | 'bookDetail' | 'publicProfile' | 'chat')[];
+  activeTab: 'dashboard' | 'discovery' | 'swap' | 'profile' | 'bookDetail' | 'publicProfile' | 'chat' | 'arena';
+  tabHistory: ('dashboard' | 'discovery' | 'swap' | 'profile' | 'bookDetail' | 'publicProfile' | 'chat' | 'arena')[];
   theme: 'light' | 'gold';
   selectedBookId: string | null;
   activeSwapChat: SwapChat | null;

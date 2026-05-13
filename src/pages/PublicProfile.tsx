@@ -110,13 +110,19 @@ export const PublicProfile: React.FC = () => {
                       {book.condition}
                     </span>
                     {requestedSwaps.includes(book.id) ? (
-                      <button disabled className="flex items-center gap-1 text-[10px] font-bold bg-green-600 text-white px-2 py-1 rounded-full">
+                      <button
+                        type="button"
+                        disabled
+                        title="Bu kitap için takas isteği zaten gönderildi"
+                        className="flex items-center gap-1 text-[10px] font-bold bg-green-600 text-white px-2 py-1 rounded-full cursor-default opacity-90"
+                      >
                         <Check size={10} /> İstendi
                       </button>
                     ) : (
-                      <button 
+                      <button
+                        type="button"
                         onClick={() => requestSwap(book.id)}
-                        className="text-[10px] font-bold bg-ink text-parchment-light px-2 py-1 rounded-full hover:bg-ink/80 transition-colors"
+                        className="text-[10px] font-bold bg-ink text-parchment-light px-2 py-1 rounded-full hover:bg-ink/80 transition-colors touch-manipulation"
                       >
                         Takas İste
                       </button>

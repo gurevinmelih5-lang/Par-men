@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, QrCode, X, CheckCircle2, Flame, Map, Compass, BookOpen } from 'lucide-react';
+import { MapPin, QrCode, X, CheckCircle2, Flame, Map as MapIcon, Compass, Quote } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useStore } from '../store/useStore';
+import type { Book } from '../mockData';
+import { gezginTurkeyBooksAsAppBooks } from '../data/gezginTurkiyeAtlas';
+import toast from 'react-hot-toast';
 import { SwapTableModal } from '../components/SwapTableModal';
 import { MapContainer, TileLayer, Marker, Circle, Polyline } from 'react-leaflet';
 import L from 'leaflet';
@@ -16,6 +19,53 @@ L.Icon.Default.mergeOptions({
   iconUrl: markerIcon,
   shadowUrl: markerShadow,
 });
+
+/** Yakınlık listesi (km): bu yarıçapa düşen sahneler kartta listelenir */
+const GEZGIN_LIST_KM = 110;
+/** Bu mesafenin altındaki checkpoint haritada altın renkte */
+const GEZGIN_GOLD_KM = 24;
+/** Samimi bildirim için tetikleme (km) */
+const GEZGIN_TOAST_KM = 6;
+
+type StoryLoc = NonNullable<Book['storyLocations']>[number];
+
+type AtlasPick = {
+  bookId: string;
+  locIndex: number;
+  location: StoryLoc;
+} | null;
+
+function gezginSceneTitle(book: Book, loc: StoryLoc): string {
+  const scene = loc.sceneLabel ?? `${loc.name} bölümü`;
+  return `${book.author} — «${book.title}» kitabında geçen ${scene}`;
+}
+
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function gezginCheckpointIcon(isGold: boolean, isSelected: boolean, orderIdx: number): L.DivIcon {
+  const bg = isGold ? '#D4AF37' : '#2563eb';
+  const shadow = isGold ? 'rgba(212,175,55,0.85)' : 'rgba(37,99,235,0.55)';
+  const ring = isGold ? '#fff8e7' : '#e0e7ff';
+  const scale = isSelected ? '1.22' : '1';
+  return L.divIcon({
+    className: 'gezgin-checkpoint',
+    html: `<div style="padding: 5px; background: ${bg}; color: white; border-radius: 50%; box-shadow: 0 0 12px ${shadow}, 0 0 0 2px ${ring}; transform: scale(${scale}); transition: transform 0.2s; display: flex; align-items: center; justify-content: center; position: relative;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="3 3"/></svg>
+      <div style="position:absolute; top:-5px; right:-5px; background: white; color: ${bg}; width:13px; height:13px; border-radius:50%; font-size:9px; font-weight:bold; display:flex; align-items:center; justify-content:center; border: 1px solid ${bg};">${orderIdx + 1}</div>
+    </div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
+  });
+}
 
 const literaryZones = [
   { center: [41.0082, 28.9784] as [number, number], label: 'Kadıköy', genre: 'Modern Edebiyat', color: '#D4AF37', radius: 900 },
@@ -31,30 +81,86 @@ export const Swap: React.FC = () => {
   const [showSwapTable, setShowSwapTable] = useState(false);
   const [isSwapping, setIsSwapping] = useState(false);
   const [mapMode, setMapMode] = useState<'swap' | 'literary' | 'atlas'>('swap');
-  const [selectedAtlasLocation, setSelectedAtlasLocation] = useState<{ bookId: string; location: any } | null>(null);
-  const [nearbyLocation, setNearbyLocation] = useState<{ bookTitle: string; location: any } | null>(null);
+  const [selectedAtlasLocation, setSelectedAtlasLocation] = useState<AtlasPick>(null);
+  const [nearbyLocation, setNearbyLocation] = useState<{ bookTitle: string; location: StoryLoc } | null>(null);
 
-  // Haversine formula
-  const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371; // km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-              Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
-  };
+  const gezginAtlasStatic = useMemo(() => gezginTurkeyBooksAsAppBooks(), []);
+
+  const booksForGezgin = useMemo(() => {
+    return [...gezginAtlasStatic, ...books.filter((b) => (b.storyLocations?.length ?? 0) > 0)];
+  }, [books, gezginAtlasStatic]);
+
+  const nearbyGezginScenes = useMemo(() => {
+    if (user.lat == null || user.lng == null) return null;
+    const rows: { book: Book; loc: StoryLoc; locIndex: number; distanceKm: number }[] = [];
+    booksForGezgin.forEach((book) => {
+      if (!book.storyLocations) return;
+      book.storyLocations.forEach((loc, locIndex) => {
+        const d = haversineKm(user.lat!, user.lng!, loc.lat, loc.lng);
+        if (d <= GEZGIN_LIST_KM) {
+          rows.push({ book, loc, locIndex, distanceKm: d });
+        }
+      });
+    });
+    rows.sort((a, b) => a.distanceKm - b.distanceKm);
+    return rows;
+  }, [booksForGezgin, user.lat, user.lng]);
+
+  const atlasMapEntries = useMemo(() => {
+    return booksForGezgin
+      .filter((b) => b.storyLocations && b.storyLocations.length > 0)
+      .map((book) => ({
+        book,
+        points: book.storyLocations!.map((loc, locIndex) => ({ loc, locIndex })),
+      }));
+  }, [booksForGezgin]);
+
+  const selectedGezginBook = useMemo(() => {
+    if (!selectedAtlasLocation) return null;
+    return booksForGezgin.find((b) => b.id === selectedAtlasLocation.bookId) ?? null;
+  }, [booksForGezgin, selectedAtlasLocation]);
+
+  const selectedGezginDistanceKm = useMemo(() => {
+    if (!selectedAtlasLocation || user.lat == null || user.lng == null) return undefined;
+    return haversineKm(user.lat, user.lng, selectedAtlasLocation.location.lat, selectedAtlasLocation.location.lng);
+  }, [selectedAtlasLocation, user.lat, user.lng]);
+
+  const gezginToastSeenRef = React.useRef<Set<string>>(new Set());
+
+  React.useEffect(() => {
+    if (mapMode !== 'atlas' || user.lat == null || user.lng == null) return;
+    const uLat = user.lat;
+    const uLng = user.lng;
+    type NearToast = { key: string; d: number; book: Book; loc: StoryLoc };
+    let nearestToast: NearToast | null = null;
+    for (const book of booksForGezgin) {
+      const locs = book.storyLocations;
+      if (!locs?.length) continue;
+      for (let locIndex = 0; locIndex < locs.length; locIndex++) {
+        const loc = locs[locIndex];
+        const d = haversineKm(uLat, uLng, loc.lat, loc.lng);
+        if (d <= GEZGIN_TOAST_KM && (!nearestToast || d < nearestToast.d)) {
+          nearestToast = { key: `${book.id}-${locIndex}`, d, book, loc };
+        }
+      }
+    }
+    if (!nearestToast || gezginToastSeenRef.current.has(nearestToast.key)) return;
+    gezginToastSeenRef.current.add(nearestToast.key);
+    toast.success(
+      `Dostum, ${nearestToast.loc.name} sahnelerine sımsıcık yakınsın — «${nearestToast.book.title}» tam yanı başında.`,
+      { id: `gezgin-near-${nearestToast.key}`, duration: 5500 }
+    );
+  }, [mapMode, user.lat, user.lng, booksForGezgin]);
 
   React.useEffect(() => {
     if (user.lat && user.lng) {
-      let closest: any = null;
+      let closest: { bookTitle: string; location: StoryLoc } | null = null;
       let minDistance = 1.0; // 1km threshold
 
       books.forEach(book => {
         if (book.storyLocations) {
           book.storyLocations.forEach(loc => {
-            const dist = getDistance(user.lat!, user.lng!, loc.lat, loc.lng);
+            const dist = haversineKm(user.lat!, user.lng!, loc.lat, loc.lng);
             if (dist < minDistance) {
               minDistance = dist;
               closest = { bookTitle: book.title, location: loc };
@@ -187,7 +293,7 @@ export const Swap: React.FC = () => {
           onClick={() => setMapMode('literary')}
           className={`flex-1 min-w-[110px] flex items-center justify-center gap-2 py-2.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all duration-300 snap-center ${mapMode === 'literary' ? 'bg-ink text-parchment-light shadow-md' : 'text-ink/60 hover:text-ink'}`}
         >
-          <Map size={16} /> Edebi Harita
+          <MapIcon size={16} /> Edebi Harita
         </button>
         <button
           onClick={() => setMapMode('atlas')}
@@ -237,7 +343,7 @@ export const Swap: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Atlas mode notification */}
+      {/* Atlas / Gezgin mode */}
       <AnimatePresence>
         {mapMode === 'atlas' && (
           <motion.div
@@ -246,14 +352,76 @@ export const Swap: React.FC = () => {
             exit={{ opacity: 0 }}
             className="flex items-center gap-3 bg-gradient-to-r from-purple-500/20 to-purple-500/5 border border-purple-500/30 rounded-2xl p-3"
           >
-            <div className="w-9 h-9 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-600 flex-shrink-0"><Compass size={18} /></div>
+            <div className="w-9 h-9 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-600 flex-shrink-0">
+              <Compass size={18} />
+            </div>
             <div>
-              <p className="text-xs font-bold text-ink">Kitap Gezgini Modu Aktif</p>
-              <p className="text-[10px] text-ink/60">Şu an bulunduğun sokağın kurgusal tarihini keşfet!</p>
+              <p className="text-xs font-bold text-ink">Gezgin modu</p>
+              <p className="text-[10px] text-ink/60 leading-snug">
+                {nearbyGezginScenes === null
+                  ? 'Haritada Türkiye roman atlasından 35 kitabın tüm durakları görünür; konumunu açınca yakın olanlar altın, uzak olanlar mavi checkpoint olur.'
+                  : `Altın: konumuna ~${GEZGIN_GOLD_KM} km içi; mavi: daha uzak ama yine haritada. Liste: ~${GEZGIN_LIST_KM} km içindeki sahneler.`}
+              </p>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {mapMode === 'atlas' && (
+        <div className="flex flex-wrap items-center gap-3 text-[10px] text-ink/65 px-1">
+          <span className="inline-flex items-center gap-1.5 font-bold">
+            <span className="w-3 h-3 rounded-full bg-[#D4AF37] shadow-sm border border-amber-200" /> Yakın (altın)
+          </span>
+          <span className="inline-flex items-center gap-1.5 font-bold">
+            <span className="w-3 h-3 rounded-full bg-[#2563eb] shadow-sm border border-blue-200" /> Uzak (mavi)
+          </span>
+        </div>
+      )}
+
+      {mapMode === 'atlas' && nearbyGezginScenes !== null && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl border border-purple-200/60 bg-white/90 p-3 shadow-sm"
+        >
+          <div className="flex items-center gap-2 mb-2 text-purple-800">
+            <Quote size={16} className="flex-shrink-0" />
+            <p className="text-[11px] font-bold uppercase tracking-wide">Buraya yakın geçen sahneler</p>
+          </div>
+          {nearbyGezginScenes.length === 0 ? (
+            <p className="text-xs text-ink/55 text-center py-3">
+              Bu yarıçap içinde kayıtlı kurgusal sahne yok. Profilden konumunu güncelleyebilir veya haritayı kaydırarak diğer şehirleri inceleyebilirsin.
+            </p>
+          ) : (
+            <ul className="max-h-40 overflow-y-auto space-y-2 pr-1">
+              {nearbyGezginScenes.map((row, i) => (
+                <li key={`${row.book.id}-${row.locIndex}-${i}`}>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedAtlasLocation({
+                        bookId: row.book.id,
+                        locIndex: row.locIndex,
+                        location: row.loc,
+                      })
+                    }
+                    className={`w-full text-left rounded-xl border px-3 py-2.5 transition-colors ${
+                      selectedAtlasLocation?.bookId === row.book.id &&
+                      selectedAtlasLocation?.locIndex === row.locIndex
+                        ? 'border-purple-500 bg-purple-50'
+                        : 'border-ink/10 bg-parchment-light/80 hover:border-purple-300'
+                    }`}
+                  >
+                    <p className="text-[11px] font-semibold text-ink leading-snug">{gezginSceneTitle(row.book, row.loc)}</p>
+                    <p className="text-[10px] text-ink/45 mt-1 line-clamp-2">{row.loc.description}</p>
+                    <p className="text-[9px] text-purple-600 font-bold mt-1.5">≈ {row.distanceKm.toFixed(1)} km</p>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </motion.div>
+      )}
 
       {/* Interactive Map */}
       <motion.section variants={item} className="relative h-[55vh] rounded-3xl overflow-hidden shadow-inner border border-ink/10" style={{ zIndex: 0 }}>
@@ -310,71 +478,86 @@ export const Swap: React.FC = () => {
             </React.Fragment>
           ))}
 
-          {/* Atlas mode: story location markers and paths */}
-          {mapMode === 'atlas' && books.map(book => {
-            if (!book.storyLocations || book.storyLocations.length === 0) return null;
-            
-            const positions: [number, number][] = book.storyLocations.map(loc => [loc.lat, loc.lng]);
-
-            return (
-              <React.Fragment key={`path-${book.id}`}>
-                {positions.length > 1 && (
-                  <Polyline 
-                    positions={positions} 
-                    pathOptions={{ color: '#8B5CF6', weight: 2, dashArray: '4, 8', opacity: 0.6 }} 
-                  />
-                )}
-                {book.storyLocations.map((loc, index) => (
-                  <Marker
-                    key={`${book.id}-${index}`}
-                    position={[loc.lat, loc.lng]}
-                    eventHandlers={{ click: () => setSelectedAtlasLocation({ bookId: book.id, location: loc }) }}
-                    icon={L.divIcon({
-                      className: 'atlas-marker',
-                      html: `<div style="padding: 6px; background: #8B5CF6; color: white; border-radius: 50%; box-shadow: 0 0 10px rgba(139,92,246,0.8); transform: scale(${selectedAtlasLocation?.location.name === loc.name ? '1.2' : '1'}); transition: all 0.3s; display: flex; align-items: center; justify-content: center; position: relative;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                        <div style="position:absolute; top:-6px; right:-6px; background: white; color: #8B5CF6; width:14px; height:14px; border-radius:50%; font-size:10px; font-weight:bold; display:flex; align-items:center; justify-content:center; border: 1px solid #8B5CF6;">${index + 1}</div>
-                      </div>`,
-                      iconSize: [32, 32],
-                      iconAnchor: [16, 32],
-                    })}
-                  />
-                ))}
-              </React.Fragment>
-            );
-          })}
+          {/* Gezgin: yakın sahneler veya konum yoksa tüm rota */}
+          {mapMode === 'atlas' &&
+            atlasMapEntries.map(({ book, points }) => {
+              const positions: [number, number][] = points.map((p) => [p.loc.lat, p.loc.lng]);
+              return (
+                <React.Fragment key={`path-${book.id}`}>
+                  {positions.length > 1 && (
+                    <Polyline
+                      positions={positions}
+                      pathOptions={{ color: '#8B5CF6', weight: 2, dashArray: '4, 8', opacity: 0.6 }}
+                    />
+                  )}
+                  {points.map(({ loc, locIndex }, orderIdx) => {
+                    const isSel =
+                      selectedAtlasLocation?.bookId === book.id &&
+                      selectedAtlasLocation?.locIndex === locIndex;
+                    const dUser =
+                      user.lat != null && user.lng != null
+                        ? haversineKm(user.lat, user.lng, loc.lat, loc.lng)
+                        : Number.POSITIVE_INFINITY;
+                    const isGold = dUser <= GEZGIN_GOLD_KM;
+                    return (
+                      <Marker
+                        key={`${book.id}-${locIndex}`}
+                        position={[loc.lat, loc.lng]}
+                        eventHandlers={{
+                          click: () =>
+                            setSelectedAtlasLocation({ bookId: book.id, locIndex, location: loc }),
+                        }}
+                        icon={gezginCheckpointIcon(isGold, isSel, orderIdx)}
+                      />
+                    );
+                  })}
+                </React.Fragment>
+              );
+            })}
         </MapContainer>
       </motion.section>
 
-      {/* Selected Atlas Location Panel */}
+      {/* Selected Gezgin sahne paneli */}
       <AnimatePresence>
-        {mapMode === 'atlas' && selectedAtlasLocation && (
+        {mapMode === 'atlas' && selectedAtlasLocation && selectedGezginBook && (
           <motion.div
+            key="gezgin-panel"
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
-            className="fixed bottom-20 left-4 right-4 p-4 rounded-2xl shadow-xl z-40 bg-white border border-ink/5"
+            className="fixed bottom-20 left-4 right-4 p-4 rounded-2xl shadow-xl z-40 bg-white border border-purple-100"
           >
             <div className="flex flex-col">
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-purple-100 text-purple-600 rounded-xl"><BookOpen size={20} /></div>
-                  <div>
-                    <h3 className="font-serif font-bold text-lg leading-tight text-ink">{selectedAtlasLocation.location.name}</h3>
-                    <p className="text-xs font-bold text-ink/60 mt-0.5">{books.find(b => b.id === selectedAtlasLocation.bookId)?.title}</p>
+              <div className="flex justify-between items-start mb-3 gap-2">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="p-2.5 bg-purple-100 text-purple-600 rounded-xl flex-shrink-0">
+                    <Quote size={20} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-purple-700 mb-1">Alıntı bağlamı</p>
+                    <h3 className="font-serif text-sm sm:text-base font-bold text-ink leading-snug">
+                      {gezginSceneTitle(selectedGezginBook, selectedAtlasLocation.location)}
+                    </h3>
+                    <p className="text-[11px] text-ink/55 mt-1 font-medium">{selectedAtlasLocation.location.name}</p>
                   </div>
                 </div>
-                <button onClick={() => setSelectedAtlasLocation(null)} className="text-ink/40 hover:text-ink">
+                <button type="button" onClick={() => setSelectedAtlasLocation(null)} className="text-ink/40 hover:text-ink flex-shrink-0">
                   <X size={20} />
                 </button>
               </div>
-              <div className="bg-parchment-dark/50 p-4 rounded-xl border border-parchment-dark relative">
-                <p className="text-sm italic text-ink/90">
-                  "{selectedAtlasLocation.location.description}"
+              <div className="bg-parchment-dark/40 p-4 rounded-xl border border-ink/5 relative">
+                <p className="text-sm leading-relaxed text-ink/95 font-serif italic border-l-2 border-purple-400 pl-3">
+                  {selectedAtlasLocation.location.description}
                 </p>
-                <div className="mt-3 flex items-center justify-between border-t border-ink/10 pt-3">
-                    <p className="text-[10px] font-bold text-purple-600 uppercase tracking-widest flex items-center gap-1"><Compass size={12}/> Kurgusal Mekan</p>
-                    <p className="text-[10px] font-bold text-ink/40">Parşömen YZ</p>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-ink/10 pt-3">
+                  <p className="text-[10px] font-bold text-purple-600 uppercase tracking-widest flex items-center gap-1">
+                    <Compass size={12} /> Kurgusal mekân
+                  </p>
+                  {selectedGezginDistanceKm != null && (
+                    <p className="text-[10px] font-bold text-ink/50">
+                      Senin konumuna ≈ {selectedGezginDistanceKm.toFixed(1)} km
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

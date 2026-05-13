@@ -66,6 +66,7 @@ export const useStore = create<StoreState>()((...a) => ({
 
       // 4. Fetch Incoming Swap Requests
       await get().fetchIncomingRequests();
+      await get().fetchOpenSwapChats();
 
     } catch (error) {
       console.error("Error fetching initial data from Supabase:", error);

@@ -9,22 +9,37 @@ import { BookDetail } from './pages/BookDetail';
 import { PublicProfile } from './pages/PublicProfile';
 import { SwapChat } from './pages/SwapChat';
 import { Auth } from './pages/Auth';
+import { UpdatePasswordForm } from './components/UpdatePasswordForm';
 import { AnimatePresence, motion } from 'framer-motion';
+import type { Session } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase';
 import { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { ThemeProvider } from './components/ThemeProvider';
 import { Onboarding, useOnboarding } from './components/Onboarding';
+import { Arena } from './pages/Arena';
 
 function App() {
   const { activeTab } = useStore();
-  const [session, setSession] = React.useState<any>(null);
+  const [session, setSession] = React.useState<Session | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [passwordRecovery, setPasswordRecovery] = React.useState(false);
   const { showOnboarding, completeOnboarding } = useOnboarding();
 
+  const toaster = (
+    <Toaster
+      position="top-center"
+      toastOptions={{ duration: 3000, style: { borderRadius: '16px', background: '#333', color: '#fff' } }}
+    />
+  );
+
   React.useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) {
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+      setSession(initialSession);
+      if (typeof window !== 'undefined' && window.location.hash.includes('type=recovery')) {
+        setPasswordRecovery(true);
+      }
+      if (initialSession) {
         useStore.getState().fetchInitialData().finally(() => setLoading(false));
       } else {
         setLoading(false);
@@ -33,9 +48,15 @@ function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) {
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setPasswordRecovery(true);
+      }
+      if (event === 'SIGNED_OUT') {
+        setPasswordRecovery(false);
+      }
+      setSession(nextSession);
+      if (nextSession) {
         useStore.getState().fetchInitialData();
       }
     });
@@ -48,6 +69,33 @@ function App() {
         (payload) => {
           if (session?.user?.id === payload.new.owner_id) {
             useStore.getState().fetchIncomingRequests();
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'swap_requests' },
+        async (payload) => {
+          const uid = session?.user?.id;
+          if (!uid) return;
+          const row = payload.new as {
+            id: string;
+            status: string;
+            owner_id: string;
+            requester_id: string;
+            chat_ended_by?: string | null;
+          };
+          if (row.status !== 'accepted') return;
+          if (row.owner_id !== uid && row.requester_id !== uid) return;
+
+          const isRequester = row.requester_id === uid;
+          await useStore.getState().openSwapChatById(row.id, { goToChatTab: isRequester });
+
+          if (isRequester) {
+            toast.success(
+              'Takasınız onaylandı. Karşı taraf ile buluşmayı planlayabilirsiniz.',
+              { id: `swap-accepted-${row.id}`, duration: 5000 }
+            );
           }
         }
       )
@@ -68,21 +116,40 @@ function App() {
       case 'bookDetail': return <BookDetail />;
       case 'publicProfile': return <PublicProfile />;
       case 'chat': return <SwapChat />;
+      case 'arena': return <Arena />;
       default: return <Dashboard />;
     }
   };
 
   if (loading) {
-    return <div className="min-h-screen bg-parchment-light flex items-center justify-center font-serif text-ink">Yükleniyor...</div>;
+    return (
+      <div className="min-h-screen bg-parchment-light flex items-center justify-center font-serif text-ink">
+        Yükleniyor...
+      </div>
+    );
+  }
+
+  if (session && passwordRecovery) {
+    return (
+      <ThemeProvider>
+        {toaster}
+        <UpdatePasswordForm onCompleted={() => setPasswordRecovery(false)} />
+      </ThemeProvider>
+    );
   }
 
   if (!session) {
-    return <Auth onSuccess={() => {}} />;
+    return (
+      <>
+        {toaster}
+        <Auth onSuccess={() => {}} />
+      </>
+    );
   }
 
   return (
     <ThemeProvider>
-      <Toaster position="top-center" toastOptions={{ duration: 3000, style: { borderRadius: '16px', background: '#333', color: '#fff' } }} />
+      {toaster}
       {showOnboarding && <Onboarding onComplete={completeOnboarding} />}
       <Layout>
         <AnimatePresence mode="wait">

@@ -3,8 +3,13 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
   body {
     @apply bg-parchment-light text-ink font-sans antialiased;
+    min-height: 100dvh;
+    -webkit-tap-highlight-color: transparent;
   }
   
   h1, h2, h3, h4, h5, h6 {
@@ -25,6 +30,9 @@
   .hide-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+  .touch-manipulation {
+    touch-action: manipulation;
   }
 }
 

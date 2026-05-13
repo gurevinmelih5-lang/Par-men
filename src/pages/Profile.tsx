@@ -2,16 +2,19 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, PolarRadiusAxis } from 'recharts';
 import { useStore } from '../store/useStore';
-import { Shield, BookOpen, MessageSquare, Award, Plus, MapPin, Edit2, Trash2, Moon, Sun, Camera, ArrowRightLeft, Clock, X, Users, ChevronRight, CheckCircle, XCircle, HelpCircle } from 'lucide-react';
+import { Shield, BookOpen, MessageSquare, Award, Plus, MapPin, Edit2, Trash2, Moon, Sun, Camera, ArrowRightLeft, Clock, X, Users, ChevronRight, CheckCircle, XCircle, HelpCircle, LogOut } from 'lucide-react';
 import { AddBookModal } from '../components/AddBookModal';
 import { EditBookModal } from '../components/EditBookModal';
 import { UserManual } from '../components/UserManual';
 import { getCurrentLocation } from '../lib/location';
 import imageCompression from 'browser-image-compression';
+import { supabase } from '../lib/supabase';
+import toast from 'react-hot-toast';
 
 export const Profile: React.FC = () => {
-  const { user, books, incomingRequests, respondToSwapRequest, deleteBook, updateLocation, setActiveTab, theme, setTheme, requestedSwaps, setViewedUser } = useStore();
+  const { user, books, incomingRequests, respondToSwapRequest, deleteBook, updateLocation, setActiveTab, theme, setTheme, requestedSwaps, setViewedUser, openSwapChats, openSwapChatById, setActiveSwapChat } = useStore();
   const [cancelledSwaps, setCancelledSwaps] = React.useState<string[]>([]);
+  const [accountEmail, setAccountEmail] = React.useState<string | null>(null);
 
   // Books user has sent swap requests for (that haven't been cancelled locally)
   const pendingBooks = books.filter(
@@ -25,6 +28,24 @@ export const Profile: React.FC = () => {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const myBooks = books.filter(b => b.ownerId === user.id);
+
+  React.useEffect(() => {
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      setAccountEmail(session?.user?.email ?? null);
+    });
+  }, []);
+
+  const handleLogout = async () => {
+    if (!window.confirm('Çıkış yapmak istediğinize emin misiniz?')) return;
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error('Çıkış yapılamadı. Tekrar dene.');
+      return;
+    }
+    setActiveSwapChat(null);
+    setActiveTab('dashboard');
+    toast.success('Güvenle çıkış yaptın.');
+  };
 
   const handleUpdateLocation = async () => {
     try {
@@ -330,6 +351,47 @@ export const Profile: React.FC = () => {
         </motion.section>
       )}
 
+      {openSwapChats.length > 0 && (
+        <motion.section variants={item} className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="font-serif text-xl flex items-center gap-2">
+              <MessageSquare size={18} className="text-green-600" />
+              Onaylı takas sohbetleri
+            </h2>
+            <span className="text-xs font-bold bg-green-50 text-green-700 px-2 py-1 rounded-full border border-green-200">
+              {openSwapChats.length} açık
+            </span>
+          </div>
+          <p className="text-[11px] text-ink/50 -mt-2">Taraflardan biri sohbeti sonlandırana kadar mesajlaşabilirsiniz.</p>
+          <div className="space-y-2">
+            {openSwapChats.map((s) => (
+              <button
+                key={s.swapId}
+                type="button"
+                onClick={() => void openSwapChatById(s.swapId, { goToChatTab: true })}
+                className="w-full flex items-center gap-3 p-3 bg-white rounded-2xl shadow-sm border border-green-100 text-left hover:border-green-200 transition-colors"
+              >
+                <div className="w-10 h-14 rounded-lg overflow-hidden bg-parchment-dark flex-shrink-0 shadow-sm">
+                  {s.bookCover ? (
+                    <img src={s.bookCover} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-parchment-light">
+                      <BookOpen size={16} className="text-ink/30" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-grow min-w-0">
+                  <p className="text-xs font-bold text-ink truncate">{s.bookTitle}</p>
+                  <p className="text-[10px] text-ink/50 truncate">{s.peerName} ile sohbet</p>
+                </div>
+                <img src={s.peerAvatar} alt="" className="w-9 h-9 rounded-full object-cover border border-ink/10 flex-shrink-0" />
+                <ChevronRight size={16} className="text-ink/25 flex-shrink-0" />
+              </button>
+            ))}
+          </div>
+        </motion.section>
+      )}
+
       {/* Outgoing / Pending Swap Requests */}
       {pendingBooks.length > 0 && (
         <motion.section variants={item} className="space-y-4">
@@ -442,6 +504,26 @@ export const Profile: React.FC = () => {
             ))}
           </div>
         )}
+      </motion.section>
+
+      <motion.section variants={item} className="space-y-3">
+        <h2 className="font-serif text-xl text-ink/90">Hesap</h2>
+        <div className="bg-white rounded-2xl border border-ink/10 shadow-sm p-4 space-y-4">
+          {accountEmail && (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-ink/40 mb-1">Oturum e-postası</p>
+              <p className="text-sm font-medium text-ink break-all">{accountEmail}</p>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => void handleLogout()}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm font-bold hover:bg-red-100 transition-colors active:scale-[0.99]"
+          >
+            <LogOut size={18} />
+            Çıkış yap
+          </button>
+        </div>
       </motion.section>
 
       <AddBookModal isOpen={isBookModalOpen} onClose={() => setIsBookModalOpen(false)} />

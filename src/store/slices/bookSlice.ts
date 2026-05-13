@@ -6,6 +6,15 @@ import type { DBBook } from '../../types/database.types';
 import { calculateDistance } from '../../lib/location';
 import toast from 'react-hot-toast';
 import type { UserSlice } from './userSlice';
+import type { SwapChat } from './uiSlice';
+
+export interface OpenSwapChatSummary {
+  swapId: string;
+  bookTitle: string;
+  bookCover: string;
+  peerName: string;
+  peerAvatar: string;
+}
 
 export interface SwapRequest {
   id: string;
@@ -22,12 +31,18 @@ export interface BookSlice {
   books: Book[];
   requestedSwaps: string[];
   incomingRequests: SwapRequest[];
+  /** Onaylı ve henüz sonlandırılmamış takas sohbetleri (profil listesi) */
+  openSwapChats: OpenSwapChatSummary[];
   addBook: (bookData: Partial<Book>) => Promise<void>;
   updateBook: (id: string, updates: Partial<Book>) => Promise<void>;
   deleteBook: (id: string) => Promise<void>;
   executeSwap: (bookId: string) => Promise<void>;
   requestSwap: (bookId: string) => Promise<void>;
   fetchIncomingRequests: () => Promise<void>;
+  fetchOpenSwapChats: () => Promise<void>;
+  fetchSwapChatPayload: (swapRequestId: string) => Promise<SwapChat | null>;
+  openSwapChatById: (swapRequestId: string, opts?: { goToChatTab?: boolean }) => Promise<void>;
+  endSwapChat: (swapRequestId: string) => Promise<void>;
   respondToSwapRequest: (requestId: string, accept: boolean) => Promise<void>;
   updateReadingProgress: (bookId: string, progress: number) => Promise<void>;
   mapDBBookToState: (dbBook: DBBook, userLat?: number, userLng?: number) => Book;
@@ -36,6 +51,7 @@ export interface BookSlice {
 export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSlice> = (set, get) => ({
   books: mockBooks,
   requestedSwaps: [],
+  openSwapChats: [],
   incomingRequests: [
     {
       id: 'mock-req-1',
@@ -246,6 +262,7 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
         .select(`
           id,
           book_id,
+          requester_id,
           status,
           created_at,
           books ( title ),
@@ -274,10 +291,122 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
     }
   },
 
+  fetchOpenSwapChats: async () => {
+    try {
+      const { user } = get();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('swap_requests')
+        .select(`
+          id,
+          owner_id,
+          requester_id,
+          books ( title, cover_url ),
+          requester_p:profiles!swap_requests_requester_id_fkey ( name, avatar_url ),
+          owner_p:profiles!swap_requests_owner_id_fkey ( name, avatar_url )
+        `)
+        .eq('status', 'accepted')
+        .is('chat_ended_by', null)
+        .or(`owner_id.eq.${user.id},requester_id.eq.${user.id}`);
+
+      if (error) throw error;
+
+      const list: OpenSwapChatSummary[] = (data || []).map((row: any) => {
+        const isOwner = row.owner_id === user.id;
+        const peer = isOwner ? row.requester_p : row.owner_p;
+        return {
+          swapId: row.id,
+          bookTitle: row.books?.title || 'Kitap',
+          bookCover: row.books?.cover_url || '',
+          peerName: peer?.name || 'Okur',
+          peerAvatar: peer?.avatar_url || 'https://i.pravatar.cc/150',
+        };
+      });
+      set({ openSwapChats: list });
+    } catch (error) {
+      console.error('Error fetching open swap chats:', error);
+    }
+  },
+
+  fetchSwapChatPayload: async (swapRequestId) => {
+    try {
+      const { user } = get();
+      if (!user) return null;
+
+      const { data, error } = await supabase
+        .from('swap_requests')
+        .select(`
+          id,
+          book_id,
+          owner_id,
+          requester_id,
+          status,
+          chat_ended_by,
+          books ( title, cover_url ),
+          requester_p:profiles!swap_requests_requester_id_fkey ( id, name, avatar_url ),
+          owner_p:profiles!swap_requests_owner_id_fkey ( id, name, avatar_url )
+        `)
+        .eq('id', swapRequestId)
+        .single();
+
+      if (error || !data) return null;
+      const row = data as any;
+      if (row.status !== 'accepted') return null;
+
+      const isOwner = row.owner_id === user.id;
+      const peer = isOwner ? row.requester_p : row.owner_p;
+      if (!peer?.id) return null;
+
+      return {
+        swapId: row.id,
+        bookId: row.book_id,
+        ownerId: row.owner_id,
+        requesterId: row.requester_id,
+        otherUserId: peer.id,
+        otherUserName: peer.name || 'Okur',
+        otherUserAvatar: peer.avatar_url || 'https://i.pravatar.cc/150',
+        bookTitle: row.books?.title || 'Kitap',
+        bookCover: row.books?.cover_url || '',
+        chatEndedBy: row.chat_ended_by ?? null,
+      };
+    } catch (error) {
+      console.error('Error fetching swap chat payload:', error);
+      return null;
+    }
+  },
+
+  openSwapChatById: async (swapRequestId, opts) => {
+    const payload = await get().fetchSwapChatPayload(swapRequestId);
+    const ui = get() as any;
+    if (payload) {
+      ui.setActiveSwapChat(payload);
+      if (opts?.goToChatTab) ui.setActiveTab('chat');
+    }
+    await get().fetchOpenSwapChats();
+  },
+
+  endSwapChat: async (swapRequestId) => {
+    try {
+      const { error } = await supabase.rpc('end_swap_chat', { p_swap_request_id: swapRequestId });
+      if (error) throw error;
+      const ui = get() as any;
+      if (ui.activeSwapChat?.swapId === swapRequestId) {
+        ui.setActiveSwapChat(null);
+        ui.setActiveTab('profile');
+      }
+      await get().fetchOpenSwapChats();
+      toast.success('Sohbet sonlandırıldı.');
+    } catch (error) {
+      console.error('Error ending swap chat:', error);
+      toast.error('Sohbet sonlandırılamadı. Supabase\'de swap_chat_extension.sql çalıştırıldığından emin olun.');
+    }
+  },
+
   respondToSwapRequest: async (requestId, accept) => {
     try {
       const newStatus = accept ? 'accepted' : 'rejected';
-      const { incomingRequests, books } = get();
+      const { incomingRequests } = get();
       const req = incomingRequests.find(r => r.id === requestId);
 
       const { error } = await supabase
@@ -292,7 +421,6 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
       }));
 
       if (accept && req) {
-        // Transfer book ownership to requester in local state
         set(state => ({
           books: state.books.map(b =>
             b.id === req.bookId
@@ -302,19 +430,8 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
           requestedSwaps: state.requestedSwaps.filter(id => id !== req.bookId),
         }));
 
-        // Open swap chat
-        const swappedBook = books.find(b => b.id === req.bookId);
-        const { setActiveSwapChat, setActiveTab } = (get() as any);
-        setActiveSwapChat({
-          swapId: requestId,
-          otherUserId: req.requesterId,
-          otherUserName: req.requesterName,
-          otherUserAvatar: req.requesterAvatar,
-          bookTitle: req.bookTitle,
-          bookCover: swappedBook?.cover || '',
-        });
-        setActiveTab('chat');
-        toast.success('Takas kabul edildi! Sohbet ekranı açılıyor...');
+        await get().openSwapChatById(requestId, { goToChatTab: true });
+        toast.success('Takas kabul edildi! Sohbet açıldı.');
       } else {
         toast.success(accept ? 'Takas isteği kabul edildi!' : 'Takas isteği reddedildi.');
       }

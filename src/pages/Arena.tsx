@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Swords, ThumbsUp, ThumbsDown, Trophy } from 'lucide-react';
+import { Swords, ThumbsUp, ThumbsDown, Trophy, ChevronLeft } from 'lucide-react';
 import { useStore } from '../store/useStore';
 
 export const Arena: React.FC = () => {
-  const { scriptums, voteDuel, user, setActiveTab } = useStore();
+  const { scriptums, voteDuel, user, setActiveTab, goBack } = useStore();
   const duels = scriptums.filter(s => s.duel);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
@@ -39,34 +39,54 @@ export const Arena: React.FC = () => {
   if (!currentScriptum) {
     return (
       <motion.div 
-        className="min-h-screen bg-parchment-light flex flex-col items-center justify-center p-6 text-center"
+        className="min-h-[100dvh] bg-parchment-light flex flex-col p-6 touch-manipulation"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >
-        <Trophy size={48} className="text-karma mb-4" />
-        <h2 className="font-serif text-2xl text-ink mb-2">Arena Sessiz...</h2>
-        <p className="text-ink/60 text-sm mb-6 max-w-xs">Şu an tartışılacak yeni bir fikir yok. Bir kitabı okuyup Scriptum ekledikten sonra buraya düello açabilirsin.</p>
         <button
-          onClick={() => setActiveTab('bookDetail')}
-          className="bg-karma text-ink px-6 py-3 rounded-xl font-bold shadow-md shadow-karma/20 hover:bg-karma/90 transition-all active:scale-[0.98]"
+          type="button"
+          onClick={() => goBack()}
+          className="flex items-center gap-1 text-sm font-bold text-ink/70 hover:text-ink min-h-[44px] w-fit -ml-1 mb-4"
         >
-          Kitap’lara Git
+          <ChevronLeft size={22} />
+          Geri
         </button>
+        <div className="flex-1 flex flex-col items-center justify-center text-center">
+          <Trophy size={48} className="text-karma mb-4" />
+          <h2 className="font-serif text-2xl text-ink mb-2">Arena Sessiz...</h2>
+          <p className="text-ink/60 text-sm mb-6 max-w-xs">Şu an tartışılacak yeni bir fikir yok. Bir kitabı okuyup Scriptum ekledikten sonra buraya düello açabilirsin.</p>
+          <button
+            type="button"
+            onClick={() => setActiveTab('discovery')}
+            className="bg-karma text-ink px-6 py-3 rounded-xl font-bold shadow-md shadow-karma/20 hover:bg-karma/90 transition-all active:scale-[0.98] min-h-[44px]"
+          >
+            Keşfet&apos;e Git
+          </button>
+        </div>
       </motion.div>
     );
   }
 
   return (
     <motion.div 
-      className="p-6 h-[calc(100vh-64px)] flex flex-col"
+      className="p-6 min-h-[calc(100dvh-5.5rem)] flex flex-col touch-manipulation"
       variants={container}
       initial="hidden"
       animate="show"
     >
-      <header className="mb-6 flex justify-between items-end">
-        <div>
+      <button
+        type="button"
+        onClick={() => goBack()}
+        className="mb-4 flex items-center gap-1 text-sm font-bold text-ink/70 hover:text-ink min-h-[44px] w-fit -ml-1 touch-manipulation"
+        aria-label="Geri"
+      >
+        <ChevronLeft size={22} />
+        Geri
+      </button>
+      <header className="mb-6 flex justify-between items-end gap-3">
+        <div className="min-w-0">
           <h1 className="text-3xl font-serif text-ink tracking-tight flex items-center gap-2">
-            <Swords className="text-karma" /> Arena
+            <Swords className="text-karma shrink-0" /> Arena
           </h1>
           <p className="text-ink/60 mt-2 font-sans text-sm">Fikirleri tart, Karma kazan.</p>
         </div>
@@ -152,8 +172,9 @@ export const Arena: React.FC = () => {
                       className="absolute inset-0 flex gap-4"
                     >
                       <button 
+                        type="button"
                         onClick={() => handleVote(false)}
-                        className="flex-1 flex flex-col items-center justify-center gap-2 bg-red-50 text-red-600 py-2 rounded-2xl hover:bg-red-100 transition-colors border border-red-100 shadow-sm active:scale-95"
+                        className="flex-1 min-h-[48px] flex flex-col items-center justify-center gap-2 bg-red-50 text-red-600 py-2 rounded-2xl hover:bg-red-100 transition-colors border border-red-100 shadow-sm active:scale-95 touch-manipulation"
                       >
                         <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm">
                           <ThumbsDown size={16} />
@@ -162,8 +183,9 @@ export const Arena: React.FC = () => {
                       </button>
                       
                       <button 
+                        type="button"
                         onClick={() => handleVote(true)}
-                        className="flex-1 flex flex-col items-center justify-center gap-2 bg-green-50 text-green-600 py-2 rounded-2xl hover:bg-green-100 transition-colors border border-green-100 shadow-sm active:scale-95"
+                        className="flex-1 min-h-[48px] flex flex-col items-center justify-center gap-2 bg-green-50 text-green-600 py-2 rounded-2xl hover:bg-green-100 transition-colors border border-green-100 shadow-sm active:scale-95 touch-manipulation"
                       >
                         <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm">
                           <ThumbsUp size={16} />
