@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Compass, MapPin, User as UserIcon } from 'lucide-react';
+import { Home, Compass, MapPin, User as UserIcon, Layers } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import clsx from 'clsx';
 
@@ -9,6 +9,7 @@ export const BottomNav: React.FC = () => {
   const tabs = [
     { id: 'dashboard' as const, icon: Home, label: 'Pano' },
     { id: 'discovery' as const, icon: Compass, label: 'Keşfet' },
+    { id: 'scriptumFeed' as const, icon: Layers, label: 'Akış' },
     { id: 'swap' as const, icon: MapPin, label: 'Takas' },
     { id: 'profile' as const, icon: UserIcon, label: 'Profil' },
   ];

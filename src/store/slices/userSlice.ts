@@ -4,6 +4,7 @@ import { currentUser } from '../../mockData';
 import type { User } from '../../mockData';
 import type { DBProfile } from '../../types/database.types';
 import toast from 'react-hot-toast';
+import { moderateImage } from '../../lib/moderation';
 
 export interface UserSlice {
   user: User;
@@ -60,6 +61,13 @@ export const createUserSlice: StateCreator<UserSlice, [], [], UserSlice> = (set,
     try {
       const { user } = get();
       if (!user) return;
+
+      toast.loading('Görsel kontrol ediliyor...', { id: 'avatarUpload' });
+      const isSafe = await moderateImage(file);
+      if (!isSafe) {
+        toast.error('Profil fotoğrafı uygunsuz içerik içeriyor. Cinsel, hakaret içeren veya siyasi görseller eklenemez.', { id: 'avatarUpload' });
+        return;
+      }
 
       toast.loading('Profil fotoğrafı güncelleniyor...', { id: 'avatarUpload' });
       

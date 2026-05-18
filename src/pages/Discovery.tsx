@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, SlidersHorizontal, Users, Book as BookIcon, BookOpen, Radio, Clock, Lock, X, Plus, Star, Swords } from 'lucide-react';
+import { Search, SlidersHorizontal, Users, Book as BookIcon, BookOpen, Radio, Clock, Lock, X, Plus, Star } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import type { User, Room } from '../mockData';
 import { mockRooms } from '../mockData';
@@ -19,6 +19,7 @@ export const Discovery: React.FC = () => {
   const [rooms, setRooms] = useState<Room[]>(mockRooms);
   const [showCreateRoom, setShowCreateRoom] = useState(false);
   const [newRoom, setNewRoom] = useState({ title: '', type: 'Sessiz Okuma' as Room['type'], time: '', maxParticipants: 20 });
+  const [joinedRooms, setJoinedRooms] = useState<Set<string>>(new Set());
 
   // Debounced user search
   useEffect(() => {
@@ -99,24 +100,7 @@ export const Discovery: React.FC = () => {
         <p className="text-ink/60 mt-2 font-sans text-sm">Ruh haline uygun yeni sayfalar bul.</p>
       </motion.header>
 
-      <motion.section variants={item} className="bg-gradient-to-br from-ink to-ink/90 text-parchment-light p-5 rounded-3xl shadow-lg border border-ink/10 flex items-center justify-between gap-4 touch-manipulation">
-        <div className="min-w-0">
-          <h2 className="font-serif text-lg font-bold flex items-center gap-2">
-            <Swords className="text-karma shrink-0" size={22} />
-            Fikir Arenası
-          </h2>
-          <p className="text-parchment-light/75 text-xs mt-1 leading-relaxed">
-            Açılmış düellolara oy ver, topluluğun hangi argümana eğildiğini gör, Entelektüel Karma kazan.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setActiveTab('arena')}
-          className="shrink-0 bg-karma text-ink font-bold text-xs px-4 py-3 rounded-xl shadow-md shadow-karma/25 active:scale-[0.98] transition-transform min-h-[44px]"
-        >
-          Aç
-        </button>
-      </motion.section>
+
 
       {/* Search + Tabs Card */}
       <motion.section variants={item} className="bg-white p-6 rounded-3xl shadow-sm border border-ink/5 space-y-4 relative overflow-hidden">
@@ -363,13 +347,22 @@ export const Discovery: React.FC = () => {
                         }`}
                         disabled={room.participants >= room.maxParticipants}
                         onClick={() => {
+                          if (joinedRooms.has(room.id)) {
+                            toast('Bu etkinliğe zaten katıldınız.', { icon: 'ℹ️' });
+                            return;
+                          }
                           if (room.participants < room.maxParticipants) {
+                            setJoinedRooms(prev => {
+                              const newSet = new Set(prev);
+                              newSet.add(room.id);
+                              return newSet;
+                            });
                             setRooms(prev => prev.map(r => r.id === room.id ? { ...r, participants: r.participants + 1 } : r));
-                            toast.success(`"${room.title}" odasına katıldınız!`);
+                            toast.success(`"${room.title}" odasına katıldınız! Etkinlik: ${room.time}`);
                           }
                         }}
                       >
-                        {room.participants >= room.maxParticipants ? <><Lock size={10} /> Dolu</> : room.isLive ? 'Katıl' : 'Kaydol'}
+                        {joinedRooms.has(room.id) ? <><Lock size={10} /> Katıldın</> : room.participants >= room.maxParticipants ? <><Lock size={10} /> Dolu</> : room.isLive ? 'Katıl' : 'Kaydol'}
                       </button>
                     </div>
                     <div className="mt-2 h-1.5 rounded-full bg-ink/10 overflow-hidden">

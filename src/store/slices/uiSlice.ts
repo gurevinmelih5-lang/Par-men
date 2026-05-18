@@ -15,8 +15,8 @@ export interface SwapChat {
 }
 
 export interface UISlice {
-  activeTab: 'dashboard' | 'discovery' | 'swap' | 'profile' | 'bookDetail' | 'publicProfile' | 'chat' | 'arena';
-  tabHistory: ('dashboard' | 'discovery' | 'swap' | 'profile' | 'bookDetail' | 'publicProfile' | 'chat' | 'arena')[];
+  activeTab: 'dashboard' | 'discovery' | 'swap' | 'profile' | 'bookDetail' | 'publicProfile' | 'chat' | 'scriptumFeed';
+  tabHistory: ('dashboard' | 'discovery' | 'swap' | 'profile' | 'bookDetail' | 'publicProfile' | 'chat' | 'scriptumFeed')[];
   theme: 'light' | 'gold';
   selectedBookId: string | null;
   activeSwapChat: SwapChat | null;

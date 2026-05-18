@@ -4,6 +4,8 @@ import { X, Book, Upload, Search } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { supabase } from '../lib/supabase';
 import imageCompression from 'browser-image-compression';
+import { moderateImage } from '../lib/moderation';
+import toast from 'react-hot-toast';
 
 interface AddBookModalProps {
   isOpen: boolean;
@@ -66,11 +68,24 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
         };
         
         const compressedFile = await imageCompression(selectedFile, options);
+
+        // Moderation check
+        const isSafe = await moderateImage(compressedFile);
+        if (!isSafe) {
+          toast.error('Görsel uygunsuz içerik içeriyor. Cinsel, hakaret içeren veya siyasi görseller eklenemez.');
+          return;
+        }
+
         setFile(compressedFile);
         setPreview(URL.createObjectURL(compressedFile));
       } catch (error) {
         console.error('Error compressing image:', error);
         // Fallback to original
+        const isSafe = await moderateImage(selectedFile);
+        if (!isSafe) {
+          toast.error('Görsel uygunsuz içerik içeriyor.');
+          return;
+        }
         setFile(selectedFile);
         setPreview(URL.createObjectURL(selectedFile));
       }

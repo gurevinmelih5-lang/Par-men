@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, MessageSquareQuote, Layers, Star, Map, Lock, Unlock, ThumbsUp, ThumbsDown, MessageSquarePlus, Dna, Clock, Heart, BookOpen, CalendarDays, MessageCircle, Share2 } from 'lucide-react';
+import { ChevronLeft, MessageSquareQuote, Layers, Star, Map, Lock, Unlock, MessageSquarePlus, Dna, Clock, Heart, BookOpen, CalendarDays, MessageCircle, Share2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useStore } from '../store/useStore';
 import { AddScriptumModal } from '../components/AddScriptumModal';
 
 export const BookDetail: React.FC = () => {
-  const { books, scriptums, setActiveTab, goBack, user, selectedBookId, voteDuel } = useStore();
-  const [duelVoteLocked, setDuelVoteLocked] = useState<Record<string, true>>({});
-  const duelVotedRef = React.useRef<Set<string>>(new Set());
+  const { books, scriptums, setActiveTab, goBack, user, selectedBookId, likeScriptum } = useStore();
 
   const handleShare = async (title: string, author: string) => {
     const text = `"${title}" – ${author} | Parşömen'de keşfet!`;
@@ -312,10 +310,13 @@ export const BookDetail: React.FC = () => {
                         </div>
                         <p className="text-[10px] text-ink/60 font-bold uppercase tracking-wide">{scriptum.userName}</p>
                       </div>
-                      <div className="flex items-center gap-1 text-[11px] text-karma font-bold">
+                      <button 
+                        onClick={() => likeScriptum(scriptum.id)}
+                        className="flex items-center gap-1 text-[11px] text-karma font-bold hover:text-karma/80 transition-colors"
+                      >
                         <Star size={14} fill="currentColor" />
                         {scriptum.likes}
-                      </div>
+                      </button>
                     </div>
 
                     {/* Scriptum Zinciri - Replies */}
@@ -350,47 +351,6 @@ export const BookDetail: React.FC = () => {
                       </div>
                     )}
 
-                    {scriptum.duel && (
-                      <div className="mt-4 pt-4 border-t border-ink/5 bg-ink/5 -mx-5 px-5 pb-2 rounded-b-2xl">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-5 h-5 rounded-full overflow-hidden bg-parchment-dark">
-                            <img src={scriptum.duel.opponentAvatar} alt="Opponent" />
-                          </div>
-                          <p className="text-[10px] font-bold text-ink/70">Fikir Düellosu: {scriptum.duel.opponentName}</p>
-                        </div>
-                        <p className="font-serif text-xs leading-relaxed text-ink/80 mb-3 italic">
-                          "{scriptum.duel.argument}"
-                        </p>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            disabled={!!duelVoteLocked[scriptum.id]}
-                            onClick={() => {
-                              if (duelVotedRef.current.has(scriptum.id)) return;
-                              duelVotedRef.current.add(scriptum.id);
-                              voteDuel(scriptum.id, true);
-                              setDuelVoteLocked((prev) => ({ ...prev, [scriptum.id]: true }));
-                            }}
-                            className="flex-1 min-h-[44px] flex items-center justify-center gap-1 bg-white border border-ink/10 py-2 rounded-lg text-[10px] font-bold text-ink hover:bg-karma/10 transition-colors disabled:opacity-50 touch-manipulation"
-                          >
-                            <ThumbsUp size={12} /> Haklı ({scriptum.duel.support})
-                          </button>
-                          <button
-                            type="button"
-                            disabled={!!duelVoteLocked[scriptum.id]}
-                            onClick={() => {
-                              if (duelVotedRef.current.has(scriptum.id)) return;
-                              duelVotedRef.current.add(scriptum.id);
-                              voteDuel(scriptum.id, false);
-                              setDuelVoteLocked((prev) => ({ ...prev, [scriptum.id]: true }));
-                            }}
-                            className="flex-1 min-h-[44px] flex items-center justify-center gap-1 bg-white border border-ink/10 py-2 rounded-lg text-[10px] font-bold text-ink hover:bg-red-500/10 transition-colors disabled:opacity-50 touch-manipulation"
-                          >
-                            <ThumbsDown size={12} /> Hatalı ({scriptum.duel.oppose})
-                          </button>
-                        </div>
-                      </div>
-                    )}
                   </motion.div>
                 ))}
               </div>

@@ -4,6 +4,7 @@ import { ChevronLeft, Send, BookOpen, CheckCheck, Ban } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import { containsProfanity } from '../lib/moderation';
 
 interface Message {
   id: string;
@@ -146,6 +147,12 @@ export const SwapChat: React.FC = () => {
   const handleSend = async () => {
     if (!input.trim() || !swapId || chatEnded) return;
     const text = input.trim();
+    
+    if (containsProfanity(text)) {
+      toast.error('Mesajınız uygunsuz kelimeler içeriyor. Lütfen düzelterek tekrar deneyin.');
+      return;
+    }
+
     setInput('');
 
     const { data, error } = await supabase
@@ -216,6 +223,22 @@ export const SwapChat: React.FC = () => {
           <div className="w-9 h-12 rounded-lg overflow-hidden bg-parchment-dark flex-shrink-0 shadow-md border border-ink/10">
             <img src={activeSwapChat.bookCover} alt="" className="w-full h-full object-cover" />
           </div>
+        )}
+
+        {activeSwapChat.ownerId === user.id && !chatEnded && (
+          <button
+            type="button"
+            onClick={async () => {
+              if (window.confirm('Kitabı teslim ettiniz mi? Takası tamamlamak üzeresiniz.')) {
+                await useStore.getState().executeSwap(activeSwapChat.bookId);
+                await useStore.getState().endSwapChat(swapId);
+              }
+            }}
+            className="p-2 rounded-full text-green-600/90 hover:bg-green-50 transition-colors flex-shrink-0"
+            title="Takası Tamamla"
+          >
+            <CheckCheck size={20} />
+          </button>
         )}
 
         <button

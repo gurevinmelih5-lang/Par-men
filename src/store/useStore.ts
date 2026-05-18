@@ -48,17 +48,14 @@ export const useStore = create<StoreState>()((...a) => ({
         set({ books: booksData.map(b => get().mapDBBookToState(b as DBBook, profile?.lat, profile?.lng)) });
       }
 
-      // 3. Fetch Scriptums with Profiles and Duels
+      // 3. Fetch Scriptums with Profiles
       const { data: scriptumsData, error: scriptumsError } = await supabase
         .from('scriptums')
         .select(`
           *,
-          profiles:user_id(name, avatar_url),
-          scriptum_duels(
-            *,
-            profiles:opponent_id(name, avatar_url)
-          )
-        `);
+          profiles:user_id(name, avatar_url)
+        `)
+        .order('created_at', { ascending: false });
         
         if (!scriptumsError && scriptumsData) {
         set({ scriptums: scriptumsData.map(s => get().mapDBScriptumToState(s as DBScriptum)) });

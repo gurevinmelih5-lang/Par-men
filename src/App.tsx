@@ -17,8 +17,7 @@ import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 import { ThemeProvider } from './components/ThemeProvider';
 import { Onboarding, useOnboarding } from './components/Onboarding';
-import { Arena } from './pages/Arena';
-
+import { ScriptumFeed } from './pages/ScriptumFeed';
 function App() {
   const { activeTab } = useStore();
   const [session, setSession] = React.useState<Session | null>(null);
@@ -116,7 +115,7 @@ function App() {
       case 'bookDetail': return <BookDetail />;
       case 'publicProfile': return <PublicProfile />;
       case 'chat': return <SwapChat />;
-      case 'arena': return <Arena />;
+      case 'scriptumFeed': return <ScriptumFeed />;
       default: return <Dashboard />;
     }
   };

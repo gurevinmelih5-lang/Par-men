@@ -83,14 +83,6 @@ export interface ScriptumReply {
   likes: number;
 }
 
-export interface DuelArgument {
-  opponentName: string;
-  opponentAvatar: string;
-  argument: string;
-  support: number;
-  oppose: number;
-}
-
 export interface Scriptum {
   id: string;
   bookId: string;
@@ -100,7 +92,6 @@ export interface Scriptum {
   content: string;
   highlightedText?: string;
   likes: number;
-  duel?: DuelArgument;
   replies?: ScriptumReply[];
 }
 
@@ -172,9 +163,9 @@ export const mockBooks: Book[] = [
     },
     isLegendary: true,
     storyLocations: [
-      { lat: 41.0312, lng: 28.9808, name: "Merhamet Apartmanı", sceneLabel: "Nişantaşı ve Teşvikiye sahneleri", description: "“Bütün bunların bir masumiyet müzesi olacağını o zaman bilmiyordum.” — Kemal'in apartman kapısından içeri adım attığı anların yankısı." },
-      { lat: 41.0314, lng: 28.9796, name: "Masumiyet Müzesi (Çukurcuma)", sceneLabel: "Nişantaşı ve Teşvikiye sahneleri", description: "“Füsun'un eşyaları arasında gezinirken zamanın durduğunu hissediyordum.” — Müzenin kurulduğu çatı katı ve toplanan nesneler." },
-      { lat: 41.0500, lng: 28.9950, name: "Şanzelize Butik", sceneLabel: "Nişantaşı ve Teşvikiye sahneleri", description: "“İlk gördüğüm anda anlamıştım; bu kız benim kaderimdi.” — Şanzelize vitrininin önündeki ilk bakışma." }
+      { lat: 41.0312, lng: 28.9808, name: "Merhamet Apartmanı", sceneLabel: "Nişantaşı ve Teşvikiye sahneleri", description: "Kemal ile Füsun’un ilk kez baş başa kaldığı, her katı çocukluk hatıraları ve sırlar taşıyan meşhur apartman dairesi." },
+      { lat: 41.0314, lng: 28.9796, name: "Masumiyet Müzesi (Çukurcuma)", sceneLabel: "Nişantaşı ve Teşvikiye sahneleri", description: "Kemal’in Füsun’a ait her türlü eşyayı 30 yıl boyunca saplantılı bir biçimde toplayarak ölümsüz bir aşk anıtına dönüştürdüğü çatı katı." },
+      { lat: 41.0500, lng: 28.9950, name: "Şanzelize Butik", sceneLabel: "Nişantaşı ve Teşvikiye sahneleri", description: "Kemal’in vitrinde Füsun’u ilk gördüğü ve o ölümsüz saplantılı aşkın ilk kıvılcımının çaktığı butik." }
     ]
   },
   {
@@ -207,9 +198,9 @@ export const mockBooks: Book[] = [
       demographics: "18-40 Yaş"
     },
     storyLocations: [
-      { lat: 41.0084, lng: 28.9779, name: "Yerebatan Sarnıcı", sceneLabel: "Sultanahmet ve tarihi yarımada sahneleri", description: "“Su yükselirken Medusa'nın gözleri bizi izliyordu.” — Sarnıçtaki suyun üstünde yankılanan gerilim." },
-      { lat: 41.0086, lng: 28.9802, name: "Ayasofya", sceneLabel: "Sultanahmet ve tarihi yarımada sahneleri", description: "“Bin beş yüz yıllık taşların arasında şifre gizliydi.” — Ayasofya kubbesinin altında nefes kesilen kovalamaca." },
-      { lat: 41.0165, lng: 28.9705, name: "Mısır Çarşısı", sceneLabel: "Eminönü sahneleri", description: "“Baharat kokusu arasında iz kayboluyordu.” — Çarşı aralarında nefes nefese geçen kaçış." }
+      { lat: 41.0084, lng: 28.9779, name: "Yerebatan Sarnıcı", sceneLabel: "Sultanahmet ve tarihi yarımada sahneleri", description: "Robert Langdon’ın, insanlığın yarısını yok edecek virüsün saklandığı çantayı bulmak için Medusa başının yanındaki sulara daldığı nefes kesici tarihi sarnıç." },
+      { lat: 41.0086, lng: 28.9802, name: "Ayasofya", sceneLabel: "Sultanahmet ve tarihi yarımada sahneleri", description: "Robert Langdon’ın sarnıca giden yolu bulmak ve şifreleri çözmek için antik taşları incelediği o görkemli kubbe altı." },
+      { lat: 41.0165, lng: 28.9705, name: "Mısır Çarşısı", sceneLabel: "Eminönü sahneleri", description: "Kovalamacanın nefes nefese devam ettiği, baharat kokuları arasında ajanların izini kaybettirdiği tarihi Eminönü çarşısı." }
     ]
   },
   {
@@ -236,9 +227,9 @@ export const mockBooks: Book[] = [
       demographics: "20-55 Yaş"
     },
     storyLocations: [
-      { lat: 41.0150, lng: 28.9850, name: "Sarayburnu (Atatürk Anıtı)", sceneLabel: "Sarayburnu ve deniz kenarı sahneleri", description: "“İlk sikke avucuma düştüğünde İstanbul'un bana fısıldadığını duydum.” — Sarayburnu'nda gün doğumu ve cinayetin gölgesi." },
-      { lat: 41.0085, lng: 28.9715, name: "Çemberlitaş Sütunu", sceneLabel: "Fatih ve Çemberlitaş sahneleri", description: "“Tarih bazen bir sütunun gölgesinde cinayet yazar.” — İkinci sikkenin ortaya çıktığı an." },
-      { lat: 40.9930, lng: 28.9220, name: "Yedikule Zindanları", sceneLabel: "Yedikule ve sur sahneleri", description: "“Altın Kapı'nın ardında karanlık bekliyordu.” — Zindan merdivenlerinde yükselen gerilim." }
+      { lat: 41.0150, lng: 28.9850, name: "Sarayburnu (Atatürk Anıtı)", sceneLabel: "Sarayburnu ve deniz kenarı sahneleri", description: "Başkomiser Nevzat’ın, elinde antik Bizans sikkesiyle bulunan ilk kurbanın cesediyle karşılaşarak yedi tepeli gizemli cinayetler zincirine adım attığı sahil." },
+      { lat: 41.0085, lng: 28.9715, name: "Çemberlitaş Sütunu", sceneLabel: "Fatih ve Çemberlitaş sahneleri", description: "Yedi tepeli şehrin gizemli katilinin, tarihe mesaj göndermek için ikinci Bizans sikkesini bıraktığı tarihi sütun gölgesi." },
+      { lat: 40.9930, lng: 28.9220, name: "Yedikule Zindanları", sceneLabel: "Yedikule ve sur sahneleri", description: "Bizans imparatorluk döneminden bugüne uzanan intikam planlarının ve cinayetlerin düğüm noktalarından biri olan tarihî zindanlar." }
     ]
   },
   {
@@ -255,9 +246,9 @@ export const mockBooks: Book[] = [
     lng: 32.8541,
     lineage: [{ city: 'Ankara', date: 'Haziran 2025', ownerName: 'Elif D.' }],
     storyLocations: [
-      { lat: 39.9334, lng: 32.8597, name: "Kızılay", sceneLabel: "Ankara sahneleri", description: "“Başkentin kalbinde ayrılık ve umut aynı kaldırımı paylaşıyordu.” — Kızılay kalabalığında bekleyiş." },
-      { lat: 39.9458, lng: 32.8361, name: "Anıtkabir", sceneLabel: "Ankara sahneleri", description: "“Merdivenleri çıkarken geçmiş omzuma dokundu.” — Aslanlı Yol'da duran sessizlik." },
-      { lat: 39.9147, lng: 32.8408, name: "Hamamönü", sceneLabel: "Ankara sahneleri", description: "“Eski taş evler arasında çocukluğum geri geldi.” — Dar sokaklarda gece yürüyüşü." }
+      { lat: 39.9334, lng: 32.8597, name: "Kızılay", sceneLabel: "Ankara sahneleri", description: "Gri başkent kalabalığında devrimci gençlerin büyük umutları, buluşma heyecanları ve ayrılık acılarının kesiştiği o büyük meydan." },
+      { lat: 39.9458, lng: 32.8361, name: "Anıtkabir", sceneLabel: "Ankara sahneleri", description: "Karakterlerin geçmişin sessiz tanıklığı ve değişen Türkiye’nin kaderiyle derin bir hüzünle yüzleştiği Aslanlı Yol." },
+      { lat: 39.9147, lng: 32.8408, name: "Hamamönü", sceneLabel: "Ankara sahneleri", description: "Eski taş evler ve dar sokaklar arasında geçmişin anılarının, çocukluk özleminin canlandığı tarihi semt." }
     ]
   }
 ];
@@ -292,13 +283,6 @@ export const mockScriptums: Scriptum[] = [
         likes: 12
       }
     ],
-    duel: {
-      opponentName: 'Elif Demir',
-      opponentAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704b',
-      argument: "Bence asıl körlük gözleri kapattığında değil, gözleri açıkken gerçeği görememektir. Yazar aslında toplumun duyarsızlığını eleştiriyor, fiziksel kırılganlığı değil.",
-      support: 24,
-      oppose: 8
-    }
   },
   {
     id: 's2',

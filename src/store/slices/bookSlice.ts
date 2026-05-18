@@ -422,11 +422,6 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
 
       if (accept && req) {
         set(state => ({
-          books: state.books.map(b =>
-            b.id === req.bookId
-              ? { ...b, ownerId: req.requesterId }
-              : b
-          ),
           requestedSwaps: state.requestedSwaps.filter(id => id !== req.bookId),
         }));
 

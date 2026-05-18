@@ -8,7 +8,6 @@ import {
   Shield,
   Compass,
   Smartphone,
-  Swords,
   Layers,
   MapPin,
 } from 'lucide-react';
@@ -41,7 +40,7 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose }) => {
               <strong>Pano:</strong> Şu an okuduğun kitap, ilerleme çubuğu ve çevrendeki öneriler.
             </li>
             <li>
-              <strong>Keşfet:</strong> Kitap ve okur araması, ruh haline göre filtre, okuma odaları ve <strong>Fikir Arenası</strong> girişi.
+              <strong>Keşfet:</strong> Kitap ve okur araması, ruh haline göre filtre ve okuma odaları.
             </li>
             <li>
               <strong>Takas:</strong> Harita; takas / edebî atlas / gezgin modları, pin seçimi ve takas masası.
@@ -70,8 +69,7 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose }) => {
               <strong>Fiziksel Kondisyon:</strong> Takas ettiğin kitapların durumu. İyi baktığın kitaplar puanını artırır.
             </li>
             <li>
-              <strong>Entelektüel Katkı:</strong> Bıraktığın Scriptum&apos;ların (notların) kalitesi, beğeniler ve{' '}
-              <strong>Fikir Arenası</strong>&apos;nda düello oylarına katılım.
+              <strong>Entelektüel Katkı:</strong> Bıraktığın Scriptum&apos;ların (notların) kalitesi ve beğeniler.
             </li>
             <li>
               <strong>Sosyal Güvenilirlik:</strong> Takaslara zamanında gitmen ve iletişim nezaketin.
@@ -138,36 +136,11 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose }) => {
             <li>
               <strong>Yeni katman ekle</strong> ile kitaba not, alıntı veya düşünce bırakırsın; topluluk beğenileri Entelektüel Karma&apos;ya yansır.
             </li>
-            <li>
-              Bir düello varsa <strong>Haklı / Hatalı</strong> oyları topluluğun eğilimini gösterir; her scriptum için bir kez oy kullanman önerilir.
-            </li>
           </ul>
         </div>
       ),
     },
-    {
-      id: 'arena',
-      icon: <Swords className="text-karma" size={20} />,
-      title: 'Fikir Arenası',
-      content: (
-        <div className="space-y-3 text-sm text-ink/80">
-          <p>
-            <strong>Keşfet</strong> sayfasındaki <strong>Fikir Arenası</strong> kartından girilir. Burada düello bağlantılı Scriptum&apos;lar kart destesi gibi sırayla gösterilir.
-          </p>
-          <ul className="list-disc pl-5 space-y-1">
-            <li>
-              <strong>Haklı / Hatalı</strong> seçeneklerinden birine dokun; kısa geri bildirim animasyonundan sonra sıradaki karta geçilir.
-            </li>
-            <li>
-              Oy vermek Entelektüel Karma kazandırır (uygulama içi kurallar geçerlidir).
-            </li>
-            <li>
-              Liste bittiğinde veya düello yoksa ekran sana <strong>Keşfet</strong> veya kitap ekleme yolu önerir.
-            </li>
-          </ul>
-        </div>
-      ),
-    },
+
     {
       id: 'rooms',
       icon: <BookOpen className="text-green-500" size={20} />,
@@ -248,7 +221,7 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose }) => {
                 <h2 id="manual-title" className="font-serif text-2xl font-bold text-ink">
                   Parşömen Rehberi
                 </h2>
-                <p className="text-xs text-ink/60 mt-1">Sekmeler, takas, katmanlar ve Arena — adım adım</p>
+                <p className="text-xs text-ink/60 mt-1">Sekmeler, takas ve katmanlar — adım adım</p>
               </div>
               <button
                 type="button"
