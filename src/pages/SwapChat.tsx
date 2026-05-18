@@ -231,7 +231,7 @@ export const SwapChat: React.FC = () => {
             onClick={async () => {
               if (window.confirm('Kitabı teslim ettiniz mi? Takası tamamlamak üzeresiniz.')) {
                 await useStore.getState().executeSwap(activeSwapChat.bookId);
-                await useStore.getState().endSwapChat(swapId);
+                if (swapId) await useStore.getState().endSwapChat(swapId);
               }
             }}
             className="p-2 rounded-full text-green-600/90 hover:bg-green-50 transition-colors flex-shrink-0"
