@@ -39,3 +39,31 @@ export const getCurrentLocation = (): Promise<{lat: number, lng: number}> => {
     );
   });
 };
+
+export const CITIES_COORDS = [
+  { name: 'İstanbul', lat: 41.0082, lng: 28.9784 },
+  { name: 'Ankara', lat: 39.9334, lng: 32.8597 },
+  { name: 'İzmir', lat: 38.4192, lng: 27.1287 },
+  { name: 'Bursa', lat: 40.1885, lng: 29.0610 },
+  { name: 'Antalya', lat: 36.8969, lng: 30.7133 },
+  { name: 'Adana', lat: 37.0000, lng: 35.3213 },
+  { name: 'Trabzon', lat: 41.0027, lng: 39.7168 },
+  { name: 'Diyarbakır', lat: 37.9144, lng: 40.2306 },
+  { name: 'Konya', lat: 37.8714, lng: 32.4932 },
+  { name: 'Kars', lat: 40.6013, lng: 43.0950 },
+  { name: 'Yozgat', lat: 39.8200, lng: 34.8044 },
+  { name: 'Sinop', lat: 42.0235, lng: 35.1531 }
+];
+
+export const getCityFromCoords = (lat: number, lng: number): string => {
+  let nearestCity = 'İstanbul';
+  let minDistance = Infinity;
+  for (const city of CITIES_COORDS) {
+    const dist = calculateDistance(lat, lng, city.lat, city.lng);
+    if (dist < minDistance) {
+      minDistance = dist;
+      nearestCity = city.name;
+    }
+  }
+  return nearestCity;
+};

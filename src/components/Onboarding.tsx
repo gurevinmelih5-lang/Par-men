@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, Map, BookOpen, ArrowLeftRight, User, X, Compass } from 'lucide-react';
+import { ChevronRight, Map, BookOpen, ArrowLeftRight, User, X, Compass, MapPin } from 'lucide-react';
+import { useStore } from '../store/useStore';
 
 const STORAGE_KEY = 'parsomen_onboarded_v1';
 
@@ -56,12 +57,35 @@ interface OnboardingProps {
 
 export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   const [step, setStep] = useState(0);
+  const [askingLocation, setAskingLocation] = useState(false);
+  const { updateLocation } = useStore();
   const isLast = step === steps.length - 1;
   const current = steps[step];
 
   const handleComplete = () => {
+    setAskingLocation(true);
+  };
+
+  const finishOnboarding = () => {
     localStorage.setItem(STORAGE_KEY, 'true');
     onComplete();
+  };
+
+  const requestLocation = () => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          await updateLocation(position.coords.latitude, position.coords.longitude);
+          finishOnboarding();
+        },
+        (error) => {
+          console.error("Location error", error);
+          finishOnboarding(); // Skip if user denies
+        }
+      );
+    } else {
+      finishOnboarding();
+    }
   };
 
   return (
@@ -93,10 +117,34 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
             </div>
           </div>
 
-          {/* Content */}
-          <div className="p-6">
-            <h2 className="font-serif text-2xl font-bold text-ink mb-3 leading-tight">{current.title}</h2>
-            <p className="text-sm text-ink/70 leading-relaxed mb-6">{current.description}</p>
+          {askingLocation ? (
+            <div className="p-8 flex flex-col items-center text-center">
+              <div className="w-20 h-20 bg-karma/10 rounded-full flex items-center justify-center text-karma mb-6 shadow-sm">
+                <MapPin size={32} />
+              </div>
+              <h2 className="font-serif text-2xl font-bold text-ink mb-3 leading-tight">Konumunu Paylaş</h2>
+              <p className="text-sm text-ink/70 leading-relaxed mb-8">
+                Kitaplarla arandaki mesafeyi hesaplamak ve Gezgin modunda hikayelerin izini sürmek için yaklaşık konumuna ihtiyacımız var.
+              </p>
+              <div className="w-full space-y-3">
+                <button
+                  onClick={requestLocation}
+                  className="w-full bg-ink text-parchment-light py-3.5 rounded-xl text-sm font-bold shadow-lg shadow-ink/20 hover:bg-ink/90 transition-all active:scale-[0.98]"
+                >
+                  Konum İzni Ver
+                </button>
+                <button
+                  onClick={finishOnboarding}
+                  className="w-full bg-parchment-dark/50 text-ink/60 py-3.5 rounded-xl text-sm font-bold hover:bg-parchment-dark/80 transition-all"
+                >
+                  Daha Sonra
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="p-6">
+              <h2 className="font-serif text-2xl font-bold text-ink mb-3 leading-tight">{current.title}</h2>
+              <p className="text-sm text-ink/70 leading-relaxed mb-6">{current.description}</p>
 
             {/* Step dots */}
             <div className="flex items-center justify-center gap-2 mb-6">
@@ -127,8 +175,9 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                 {isLast ? 'Başlayalım! 🚀' : 'Devam'}
                 {!isLast && <ChevronRight size={16} />}
               </button>
+              </div>
             </div>
-          </div>
+          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>

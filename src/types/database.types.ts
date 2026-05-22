@@ -25,6 +25,7 @@ export interface DBBook {
   title: string;
   author: string;
   cover_url: string;
+  genre: string;
   condition: string;
   pace: string;
   depth: string;
@@ -51,9 +52,18 @@ export interface DBDuel {
   profiles?: Partial<DBProfile>;
 }
 
+export interface DBReply {
+  id: string;
+  scriptum_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  profiles?: Partial<DBProfile>;
+}
+
 export interface DBScriptum {
   id: string;
-  book_id: string;
+  book_id: string | null;
   user_id: string;
   content: string;
   highlighted_text: string | null;
@@ -61,4 +71,6 @@ export interface DBScriptum {
   created_at: string;
   profiles?: Partial<DBProfile>;
   scriptum_duels?: DBDuel[];
+  scriptum_replies?: DBReply[];
+  scriptum_likes?: { user_id: string }[];
 }

@@ -3,7 +3,7 @@
  * Kaynak: kamuya açık edebiyat haritaları, şehir–eser eşleştirmeleri ve
  * yayımlarda geçen somut mekân adları (yaklaşık koordinatlar OSM referanslıdır).
  */
-import type { Book } from '../mockData';
+import type { Book } from '../types/models';
 
 export interface GezginTurkeyCheckpoint {
   id: string;
@@ -66,7 +66,11 @@ export const GEZGIN_TURKEY_LITERATURE: GezginTurkeyBook[] = [
     { id: 'c2', name: 'Bahariye', sceneLabel: 'Kadıköy sahneleri', excerpt: 'Turgut Özben’in, dostu Selim’in gizemli intiharının ardındaki sır perdesini aralamak için adımlarını takip ettiği hüzünlü ve entelektüel cadde.', lat: 40.9908, lng: 29.0244 },
   ]},
   { id: 'gtr-11', title: 'Puslu Kıtalar Atlası', author: 'İhsan Oktay Anar', cover: DEFAULT_GEZGIN_COVER, checkpoints: [
-    { id: 'c1', name: 'Galata Kulesi çevresi', sceneLabel: 'Beyoğlu sahneleri', excerpt: 'Uzun İhsan Efendi’nin uyku şurubunu içip düşlerinde yeni dünyalar haritalandırdığı, Galata’nın o sisli ve gizemli Osmanlı sokakları.', lat: 41.0256, lng: 28.9744 },
+    { id: 'c1', name: 'Yüksek Kaldırım / Galata', sceneLabel: 'Uzun İhsan Efendi’nin Evi', excerpt: 'Uzun İhsan Efendi\'nin uyku şurubunu içip düşlerinde yeni dünyalar haritalandırdığı, Galata\'nın o sisli ve dik yokuşlu sokakları.', lat: 41.0248, lng: 28.9741 },
+    { id: 'c2', name: 'Galata Kulesi Çevresi', sceneLabel: 'Alibaz’ın Düşbazlıkları', excerpt: 'Alibaz’ın sokak çocuklarıyla çete kurup Galata Kulesi’nin gölgesinde hayali maceralara atıldığı gizemli meydan.', lat: 41.0256, lng: 28.9744 },
+    { id: 'c3', name: 'Galata Limanı / Karaköy', sceneLabel: 'Arap İhsan’ın Gelişi', excerpt: 'Arap İhsan’ın devasa kadırgadan inip Galata yokuşlarına doğru ilk adımını attığı, gemicilerin ve tüccarların kaynaştığı eski rıhtım.', lat: 41.0222, lng: 28.9760 },
+    { id: 'c4', name: 'Unkapanı Meyhaneleri', sceneLabel: 'Kırmızı Lale Meyhanesi', excerpt: 'Karakterlerin korsan hikâyeleri dinlediği, şarap ve tütün dumanı altındaki loş Haliç kıyısı meyhanesi.', lat: 41.0245, lng: 28.9592 },
+    { id: 'c5', name: 'Süleymaniye Zindanları', sceneLabel: 'Teşkilatın Dehlizleri', excerpt: 'Bünyamin’in gizli teşkilatın eline düşüp yer altı dehlizlerinde ve Süleymaniye lağımlarında hayatta kalma savaşı verdiği zindanlar.', lat: 41.0160, lng: 28.9640 },
   ]},
   { id: 'gtr-12', title: 'Aşk', author: 'Elif Şafak', cover: DEFAULT_GEZGIN_COVER, checkpoints: [
     { id: 'c1', name: 'Mevlana Müzesi', sceneLabel: 'Konya sahneleri', excerpt: 'Şems-i Tebrizi ile Mevlana Celaleddin Rumi’nin yollarının kesiştiği, ilahi aşk ve tasavvuf felsefesinin kalbi olan mistik mekân.', lat: 37.8710, lng: 32.4846 },
@@ -145,6 +149,16 @@ export const GEZGIN_TURKEY_LITERATURE: GezginTurkeyBook[] = [
     { id: 'c1', name: 'Bodrum', sceneLabel: 'Muğla sahneleri', excerpt: 'Cevat Şakir’in sürgün olarak geldiği andan itibaren âşık olduğu, Bodrum’u mavi yolculukların ve sünger avcılarının cenneti haline getirdiği sahil şeridi.', lat: 37.0344, lng: 27.4305 },
     { id: 'c2', name: 'Datça', sceneLabel: 'Muğla sahneleri', excerpt: 'Balıkçı’nın mavi teknelerle yanaşıp doğanın el değmemiş büyüleyici güzelliğini ve Ege’nin mitolojik rüzgârını içine çektiği gizli Datça koyları.', lat: 36.7272, lng: 27.6878 },
   ]},
+  { id: 'gtr-36', title: 'Suskunlar', author: 'İhsan Oktay Anar', cover: DEFAULT_GEZGIN_COVER, checkpoints: [
+    { id: 'c1', name: 'Yenikapı Mevlevihanesi', sceneLabel: 'Mistik Musiki Meclisi', excerpt: 'Neyzenlerin, kudümzenlerin ve musiki üstatlarının ruhani tınılarla sema ettiği, Eflatun’un ruhundaki sesleri aradığı tarihi mevlevihane.', lat: 40.9998, lng: 28.9185 },
+    { id: 'c2', name: 'Galata Mevlevihanesi', sceneLabel: 'Sırların Semahanesi', excerpt: 'Dede Efendi ve diğer musiki dehalarının musiki dersleri verdiği, Galata’nın kalbindeki o dingin ve mistik avlu.', lat: 41.0280, lng: 28.9745 },
+    { id: 'c3', name: 'Cibali Sokakları', sceneLabel: 'Eflatun’un Çocukluğu', excerpt: 'Eflatun’un çocukluğunda kulağına fısıldayan seslerin izini sürdüğü, Haliç kıyısındaki dar, ahşap evlerle bezeli tarihi mahalle.', lat: 41.0255, lng: 28.9550 },
+  ]},
+  { id: 'gtr-37', title: 'Amat', author: 'İhsan Oktay Anar', cover: DEFAULT_GEZGIN_COVER, checkpoints: [
+    { id: 'c1', name: 'Tersane-i Amire (Kasımpaşa)', sceneLabel: 'Amat’ın İnşası', excerpt: 'Osmanlı denizciliğinin kalbi olan, devasa savaş kalyonu Amat’ın gürgen ve meşe keresteleriyle Haliç kıyısında kızağa konulduğu tersane.', lat: 41.0330, lng: 28.9660 },
+    { id: 'c2', name: 'Sarayburnu Açıkları', sceneLabel: 'Amat’ın Demir Alması', excerpt: 'Amat kalyonunun Akdeniz’e yelken açmadan önce Marmara esintisinde demir alıp İstanbul halkına kalyon süzülüşünü izlettiği boğaz suları.', lat: 41.0175, lng: 28.9890 },
+    { id: 'c3', name: 'Yedikule Zindanları', sceneLabel: 'Sır ve Kehanetler', excerpt: 'Tutsak denizcilerin, haritacıların ve gizemli şahsiyetlerin Amat gemisine dair kehanetleri fısıldadığı sur içi zindan odaları.', lat: 40.9930, lng: 28.9220 },
+  ]},
 ];
 
 const ATLAS_OWNER = 'atlas-gezgin';
@@ -155,6 +169,7 @@ export function gezginTurkeyBooksAsAppBooks(): Book[] {
     title: g.title,
     author: g.author,
     cover: g.cover,
+    genre: 'Roman',
     condition: 'Good' as const,
     pace: 'Medium' as const,
     depth: 'High' as const,

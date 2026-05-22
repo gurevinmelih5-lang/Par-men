@@ -1,14 +1,16 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, QrCode, X, CheckCircle2, Flame, Map as MapIcon, Compass, Quote } from 'lucide-react';
+import { MapPin, QrCode, X, CheckCircle2, Flame, Map as MapIcon, Compass, Quote, ScanLine } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useStore } from '../store/useStore';
-import type { Book } from '../mockData';
+import type { Book } from '../types/models';
 import { gezginTurkeyBooksAsAppBooks } from '../data/gezginTurkiyeAtlas';
 import toast from 'react-hot-toast';
-import { SwapTableModal } from '../components/SwapTableModal';
+import { QRScanner } from '../components/QRScanner';
 import { MapContainer, TileLayer, Marker, Circle, Polyline } from 'react-leaflet';
 import L from 'leaflet';
+import { getCityFromCoords, CITIES_COORDS } from '../lib/location';
+import { supabase } from '../lib/supabase';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -26,6 +28,8 @@ const GEZGIN_LIST_KM = 110;
 const GEZGIN_GOLD_KM = 24;
 /** Samimi bildirim için tetikleme (km) */
 const GEZGIN_TOAST_KM = 6;
+/** Ziyaret etme (check-in) için gereken maksimum mesafe (km) */
+const GEZGIN_CHECKIN_LIMIT_KM = 1.0;
 
 type StoryLoc = NonNullable<Book['storyLocations']>[number];
 
@@ -67,22 +71,240 @@ function gezginCheckpointIcon(isGold: boolean, isSelected: boolean, orderIdx: nu
   });
 }
 
-const literaryZones = [
-  { center: [41.0082, 28.9784] as [number, number], label: 'Kadıköy', genre: 'Modern Edebiyat', color: '#D4AF37', radius: 900 },
-  { center: [41.0425, 29.0093] as [number, number], label: 'Beşiktaş', genre: 'Psikoloji & Felsefe', color: '#8B5CF6', radius: 750 },
-  { center: [41.0136, 28.9550] as [number, number], label: 'Beyoğlu', genre: 'Sanat & Şiir', color: '#EC4899', radius: 600 },
-  { center: [41.0030, 29.0210] as [number, number], label: 'Üsküdar', genre: 'Tarih & Tasavvuf', color: '#14B8A6', radius: 700 },
-];
 
 export const Swap: React.FC = () => {
-  const { books, user, executeSwap } = useStore();
+  const { books, user, executeSwap, requestSwap } = useStore();
   const [selectedBook, setSelectedBook] = useState<string | null>(null);
   const [showQR, setShowQR] = useState(false);
-  const [showSwapTable, setShowSwapTable] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const [isSwapping, setIsSwapping] = useState(false);
   const [mapMode, setMapMode] = useState<'swap' | 'literary' | 'atlas'>('swap');
   const [selectedAtlasLocation, setSelectedAtlasLocation] = useState<AtlasPick>(null);
   const [nearbyLocation, setNearbyLocation] = useState<{ bookTitle: string; location: StoryLoc } | null>(null);
+
+  const [selectedRouteBookId, setSelectedRouteBookId] = useState<string>('all');
+  const [visitedCheckpoints, setVisitedCheckpoints] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('gezgin_visited_checkpoints');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const handleCheckIn = async (bookId: string, locIndex: number, locationName: string) => {
+    const key = `${bookId}-${locIndex}`;
+    if (visitedCheckpoints.includes(key)) {
+      toast.error('Bu mekânı zaten ziyaret ettiniz.');
+      return;
+    }
+
+    // Mesafe doğrulaması (1 km sınırı)
+    const targetBook = booksForGezgin.find((b) => b.id === bookId);
+    const targetLoc = targetBook?.storyLocations?.[locIndex];
+    if (!targetLoc || user.lat == null || user.lng == null) {
+      toast.error('Konumunuz belirlenemedi veya mekân bilgisi bulunamadı.');
+      return;
+    }
+
+    const dist = haversineKm(user.lat, user.lng, targetLoc.lat, targetLoc.lng);
+    if (dist > GEZGIN_CHECKIN_LIMIT_KM) {
+      toast.error(`Ziyaret edebilmek için mekâna ${GEZGIN_CHECKIN_LIMIT_KM} km yakınında olmalısınız. (Uzaklığınız: ${dist.toFixed(2)} km)`);
+      return;
+    }
+
+    const newList = [...visitedCheckpoints, key];
+    setVisitedCheckpoints(newList);
+    localStorage.setItem('gezgin_visited_checkpoints', JSON.stringify(newList));
+
+    try {
+      const newIntellectual = (user.karma?.intellectual || 0) + 15;
+      const newTotal = Math.round(((user.karma?.physical || 0) + newIntellectual + (user.karma?.social || 0)) / 3);
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ karma_intellectual: newIntellectual })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      useStore.setState((state: any) => ({
+        user: {
+          ...state.user,
+          karma: {
+            ...state.user.karma,
+            intellectual: newIntellectual,
+            total: newTotal
+          }
+        }
+      }));
+
+      toast.success(`Harika! ${locationName} mekânını ziyaret ettiniz. +15 Entelektüel Karma kazanıldı! 🧭`, {
+        duration: 5000
+      });
+    } catch (err) {
+      console.error('Error updating intellectual karma:', err);
+      toast.error('Karma güncellenirken bir hata oluştu fakat ziyaret günlüğünüze eklendi.');
+    }
+  };
+
+  const achievements = useMemo(() => {
+    const list = [
+      {
+        id: 'first_voyage',
+        name: 'İlk Yolculuk',
+        description: 'İlk edebi checkpoint ziyaretinizi gerçekleştirin.',
+        icon: '🧭',
+        unlocked: visitedCheckpoints.length >= 1
+      },
+      {
+        id: 'museum_guard',
+        name: 'Müze Bekçisi',
+        description: 'Masumiyet Müzesi mekanlarından birini ziyaret edin.',
+        icon: '🏛️',
+        unlocked: visitedCheckpoints.some(k => k.startsWith('gtr-01'))
+      },
+      {
+        id: 'steppe_rebel',
+        name: 'Bozkır Muhalifi',
+        description: 'Yılkı Atı veya Memleketimden İnsan Manzaraları Ankara sahnelerini ziyaret edin.',
+        icon: '🌾',
+        unlocked: visitedCheckpoints.includes('gtr-04-0') || visitedCheckpoints.includes('gtr-23-1')
+      },
+      {
+        id: 'cukurova_hero',
+        name: 'Çukurova Yiğidi',
+        description: 'İnce Memed mekanlarından birini ziyaret edin.',
+        icon: '🔥',
+        unlocked: visitedCheckpoints.some(k => k.startsWith('gtr-03'))
+      },
+      {
+        id: 'mystic_quest',
+        name: 'Mistik Arayış',
+        description: 'Aşk romanındaki Mevlana Müzesi\'ni ziyaret edin.',
+        icon: '✨',
+        unlocked: visitedCheckpoints.includes('gtr-12-0')
+      },
+      {
+        id: 'galata_dream',
+        name: 'Galata Rüyası',
+        description: 'Puslu Kıtalar Atlası Galata Kulesi sahnesini ziyaret edin.',
+        icon: '🗼',
+        unlocked: visitedCheckpoints.includes('gtr-11-1')
+      },
+      {
+        id: 'dusbaz_gezgin',
+        name: 'Düşbaz Gezgin',
+        description: 'İhsan Oktay Anar\'ın Puslu Kıtalar Atlası, Suskunlar veya Amat kitaplarından 3 farklı mekanı ziyaret edin.',
+        icon: '📜',
+        unlocked: visitedCheckpoints.filter(k => k.startsWith('gtr-11') || k.startsWith('gtr-36') || k.startsWith('gtr-37')).length >= 3
+      }
+    ];
+    return list;
+  }, [visitedCheckpoints]);
+
+  const dynamicLiteraryZones = useMemo(() => {
+    const cityMap: { [cityName: string]: { [genre: string]: number } } = {};
+
+    const addGenreToCity = (cityName: string, genre: string) => {
+      const cleanCityName = cityName.trim();
+      if (!cleanCityName) return;
+      if (!cityMap[cleanCityName]) {
+        cityMap[cleanCityName] = {};
+      }
+      cityMap[cleanCityName][genre] = (cityMap[cleanCityName][genre] || 0) + 1;
+    };
+
+    books.forEach(book => {
+      if (book.lat != null && book.lng != null) {
+        const currentCity = getCityFromCoords(book.lat, book.lng);
+        addGenreToCity(currentCity, book.genre);
+      }
+      if (book.lineage) {
+        book.lineage.forEach(entry => {
+          if (entry.city) {
+            addGenreToCity(entry.city, book.genre);
+          }
+        });
+      }
+    });
+
+    const genreColorMap: { [genre: string]: string } = {
+      'Roman': '#D4AF37',
+      'Bilim Kurgu': '#3B82F6',
+      'Tarih': '#10B981',
+      'Felsefe': '#8B5CF6',
+      'Psikoloji': '#EC4899',
+      'Şiir': '#EF4444',
+      'Biyografi': '#F59E0B',
+      'Sanat': '#14B8A6',
+      'Kişisel Gelişim': '#6366F1',
+      'Polisiye': '#4B5563',
+      'Diğer': '#84CC16'
+    };
+
+    const zones: {
+      center: [number, number];
+      label: string;
+      genre: string;
+      color: string;
+      radius: number;
+      totalCount: number;
+      percentage: number;
+      genresBreakdown: { genre: string; count: number; percentage: number }[];
+    }[] = [];
+
+    Object.entries(cityMap).forEach(([cityName, genreCounts]) => {
+      const cityCoords = CITIES_COORDS.find(c => c.name.toLowerCase() === cityName.toLowerCase());
+      if (!cityCoords) return;
+
+      const totalCount = Object.values(genreCounts).reduce((a, b) => a + b, 0);
+      if (totalCount === 0) return;
+
+      let dominantGenre = 'Diğer';
+      let maxCount = 0;
+      Object.entries(genreCounts).forEach(([genre, count]) => {
+        if (count > maxCount) {
+          maxCount = count;
+          dominantGenre = genre;
+        }
+      });
+
+      const percentage = Math.round((maxCount / totalCount) * 100);
+
+      const genresBreakdown = Object.entries(genreCounts)
+        .map(([genre, count]) => ({
+          genre,
+          count,
+          percentage: Math.round((count / totalCount) * 100)
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      const radius = Math.min(3000, 600 + totalCount * 250);
+      const color = genreColorMap[dominantGenre] || '#84CC16';
+
+      zones.push({
+        center: [cityCoords.lat, cityCoords.lng] as [number, number],
+        label: cityName,
+        genre: dominantGenre,
+        color,
+        radius,
+        totalCount,
+        percentage,
+        genresBreakdown
+      });
+    });
+
+    if (zones.length === 0) {
+      return [
+        { center: [41.0082, 28.9784] as [number, number], label: 'İstanbul', genre: 'Roman', color: '#D4AF37', radius: 1000, totalCount: 1, percentage: 100, genresBreakdown: [{ genre: 'Roman', count: 1, percentage: 100 }] },
+        { center: [39.9334, 32.8597] as [number, number], label: 'Ankara', genre: 'Felsefe', color: '#8B5CF6', radius: 800, totalCount: 1, percentage: 100, genresBreakdown: [{ genre: 'Felsefe', count: 1, percentage: 100 }] },
+        { center: [38.4192, 27.1287] as [number, number], label: 'İzmir', genre: 'Tarih', color: '#10B981', radius: 750, totalCount: 1, percentage: 100, genresBreakdown: [{ genre: 'Tarih', count: 1, percentage: 100 }] }
+      ];
+    }
+
+    return zones;
+  }, [books]);
 
   const gezginAtlasStatic = useMemo(() => gezginTurkeyBooksAsAppBooks(), []);
 
@@ -245,9 +467,18 @@ export const Swap: React.FC = () => {
 
   return (
     <motion.div className="p-6 pb-28 space-y-6" variants={container} initial="hidden" animate="show">
-      <motion.header variants={item}>
-        <h1 className="text-3xl font-serif text-ink tracking-tight">Hiper-Lokal Takas</h1>
-        <p className="text-ink/60 mt-2 font-sans text-sm">Yakınındaki güvenli buluşma noktalarında takas yap.</p>
+      <motion.header variants={item} className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-serif text-ink tracking-tight">Hiper-Lokal Takas</h1>
+          <p className="text-ink/60 mt-2 font-sans text-sm">Yakınındaki güvenli buluşma noktalarında takas yap.</p>
+        </div>
+        <button 
+          onClick={() => setShowScanner(true)}
+          className="bg-karma/20 text-karma p-3 rounded-xl hover:bg-karma/30 transition-colors shadow-sm"
+          title="QR Okut"
+        >
+          <ScanLine size={24} />
+        </button>
       </motion.header>
 
       {/* Proximity Alert */}
@@ -312,12 +543,12 @@ export const Swap: React.FC = () => {
             exit={{ opacity: 0, y: -10 }}
             className="grid grid-cols-2 gap-2"
           >
-            {literaryZones.map(zone => (
+            {dynamicLiteraryZones.map(zone => (
               <div key={zone.label} className="flex items-center gap-2 bg-white p-2 rounded-xl border border-ink/5 shadow-sm">
                 <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: zone.color, boxShadow: `0 0 6px ${zone.color}` }} />
-                <div>
-                  <p className="text-[10px] font-bold text-ink leading-none">{zone.label}</p>
-                  <p className="text-[9px] text-ink/50">{zone.genre}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-bold text-ink leading-none truncate">{zone.label}</p>
+                  <p className="text-[9px] text-ink/50 truncate">{zone.genre} ({zone.totalCount} kitap)</p>
                 </div>
               </div>
             ))}
@@ -423,6 +654,78 @@ export const Swap: React.FC = () => {
         </motion.div>
       )}
 
+      {mapMode === 'atlas' && (
+        <div className="space-y-2">
+          <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider">Takip Edilecek Edebi Rota</label>
+          <select
+            value={selectedRouteBookId}
+            onChange={(e) => {
+              setSelectedRouteBookId(e.target.value);
+              setSelectedAtlasLocation(null);
+            }}
+            className="w-full bg-white border border-ink/10 py-3 px-4 rounded-xl text-ink font-semibold focus:outline-none focus:border-karma transition-all shadow-sm text-sm"
+          >
+            <option value="all">Tüm Edebi Rotalar (35 Kitap)</option>
+            {booksForGezgin.filter(b => b.storyLocations && b.storyLocations.length > 0).map(b => (
+              <option key={b.id} value={b.id}>{b.title} — {b.author}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {mapMode === 'atlas' && selectedRouteBookId !== 'all' && (() => {
+        const activeRouteBook = booksForGezgin.find(b => b.id === selectedRouteBookId);
+        if (!activeRouteBook || !activeRouteBook.storyLocations) return null;
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white/80 backdrop-blur-sm p-4 rounded-2xl border border-purple-100 shadow-sm space-y-3"
+          >
+            <div className="flex gap-3">
+              <div className="w-12 h-16 object-cover rounded shadow-sm overflow-hidden bg-parchment-dark">
+                <img src={activeRouteBook.cover} alt={activeRouteBook.title} className="w-full h-full object-cover" />
+              </div>
+              <div>
+                <h4 className="font-serif text-sm font-bold text-ink">{activeRouteBook.title}</h4>
+                <p className="text-xs text-ink/60">{activeRouteBook.author}</p>
+                <p className="text-[10px] text-purple-600 font-bold mt-1 uppercase tracking-wider">{activeRouteBook.storyLocations.length} Sahne Durak Noktası</p>
+              </div>
+            </div>
+            
+            <div className="border-t border-ink/5 pt-3 space-y-2">
+              <p className="text-[10px] font-bold text-ink/40 uppercase tracking-widest">Rota Durakları</p>
+              <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                {activeRouteBook.storyLocations.map((loc, idx) => {
+                  const isVisited = visitedCheckpoints.includes(`${activeRouteBook.id}-${idx}`);
+                  const isSel = selectedAtlasLocation?.bookId === activeRouteBook.id && selectedAtlasLocation?.locIndex === idx;
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setSelectedAtlasLocation({ bookId: activeRouteBook.id, locIndex: idx, location: loc })}
+                      className={`w-full text-left p-2 rounded-xl text-xs flex items-center justify-between border transition-all ${isSel ? 'border-purple-400 bg-purple-50' : 'border-ink/5 bg-parchment-light/30 hover:bg-parchment-light/50'}`}
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-[10px] flex-shrink-0">{idx + 1}</span>
+                        <span className="font-medium text-ink truncate">{loc.name}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {isVisited ? (
+                          <span className="text-[9px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-150">Görüldü</span>
+                        ) : (
+                          <span className="text-[9px] font-bold text-ink/40 font-sans">Keşfedilmedi</span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </motion.div>
+        );
+      })()}
+
       {/* Interactive Map */}
       <motion.section variants={item} className="relative h-[55vh] rounded-3xl overflow-hidden shadow-inner border border-ink/10" style={{ zIndex: 0 }}>
         <MapContainer
@@ -463,7 +766,7 @@ export const Swap: React.FC = () => {
           })}
 
           {/* Literary mode: heatmap circles */}
-          {mapMode === 'literary' && literaryZones.map(zone => (
+          {mapMode === 'literary' && dynamicLiteraryZones.map(zone => (
             <React.Fragment key={zone.label}>
               <Circle
                 center={zone.center}
@@ -481,16 +784,24 @@ export const Swap: React.FC = () => {
           {/* Gezgin: yakın sahneler veya konum yoksa tüm rota */}
           {mapMode === 'atlas' &&
             atlasMapEntries.map(({ book, points }) => {
+              const opacity = selectedRouteBookId === 'all' ? 0.6 : (selectedRouteBookId === book.id ? 0.9 : 0.15);
+              const weight = selectedRouteBookId === book.id ? 5 : 2;
+              const dashArray = selectedRouteBookId === book.id ? undefined : '4, 8';
+              const color = selectedRouteBookId === book.id ? '#D4AF37' : '#8B5CF6';
+
               const positions: [number, number][] = points.map((p) => [p.loc.lat, p.loc.lng]);
               return (
                 <React.Fragment key={`path-${book.id}`}>
                   {positions.length > 1 && (
                     <Polyline
                       positions={positions}
-                      pathOptions={{ color: '#8B5CF6', weight: 2, dashArray: '4, 8', opacity: 0.6 }}
+                      pathOptions={{ color, weight, dashArray, opacity }}
                     />
                   )}
                   {points.map(({ loc, locIndex }, orderIdx) => {
+                    if (selectedRouteBookId !== 'all' && selectedRouteBookId !== book.id) {
+                      return null;
+                    }
                     const isSel =
                       selectedAtlasLocation?.bookId === book.id &&
                       selectedAtlasLocation?.locIndex === locIndex;
@@ -549,14 +860,35 @@ export const Swap: React.FC = () => {
                 <p className="text-sm leading-relaxed text-ink/95 font-serif italic border-l-2 border-purple-400 pl-3">
                   {selectedAtlasLocation.location.description}
                 </p>
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-ink/10 pt-3">
-                  <p className="text-[10px] font-bold text-purple-600 uppercase tracking-widest flex items-center gap-1">
-                    <Compass size={12} /> Kurgusal mekân
-                  </p>
-                  {selectedGezginDistanceKm != null && (
-                    <p className="text-[10px] font-bold text-ink/50">
-                      Senin konumuna ≈ {selectedGezginDistanceKm.toFixed(1)} km
+                <div className="mt-3 flex flex-col gap-2 border-t border-ink/10 pt-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[10px] font-bold text-purple-600 uppercase tracking-widest flex items-center gap-1">
+                      <Compass size={12} /> Kurgusal mekân
                     </p>
+                  </div>
+                  {selectedGezginDistanceKm != null && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full mt-1.5">
+                      <p className="text-[10px] font-bold text-ink/50">
+                        Senin konumuna ≈ {selectedGezginDistanceKm.toFixed(1)} km
+                      </p>
+                      {visitedCheckpoints.includes(`${selectedAtlasLocation.bookId}-${selectedAtlasLocation.locIndex}`) ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full border border-green-200">
+                          <CheckCircle2 size={12} /> Ziyaret Edildi
+                        </span>
+                      ) : selectedGezginDistanceKm <= GEZGIN_CHECKIN_LIMIT_KM ? (
+                        <button
+                          type="button"
+                          onClick={() => handleCheckIn(selectedAtlasLocation.bookId, selectedAtlasLocation.locIndex, selectedAtlasLocation.location.name)}
+                          className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-md transition-all active:scale-[0.98] flex items-center gap-1.5"
+                        >
+                          <Compass size={14} /> Mekânı Ziyaret Et (+15 Karma)
+                        </button>
+                      ) : (
+                        <span className="text-[10px] text-ink/40 italic">
+                          (Ziyaret etmek için {(selectedGezginDistanceKm - GEZGIN_CHECKIN_LIMIT_KM).toFixed(1)} km daha yaklaşmalısın)
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -602,26 +934,19 @@ export const Swap: React.FC = () => {
                   </p>
                 </div>
                 <button
-                  onClick={() => setShowSwapTable(true)}
+                  onClick={() => {
+                    requestSwap(activeBook.id);
+                    setSelectedBook(null);
+                  }}
                   className={`text-sm font-medium px-4 py-2 rounded-xl transition-colors shadow-md ${activeBook.isLegendary ? 'bg-karma text-ink shadow-karma/30' : 'bg-ink text-parchment-light shadow-ink/20 hover:bg-ink/90'}`}
                 >
-                  Takas Masası
+                  Takas İste
                 </button>
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Swap Table Modal */}
-      {activeBook && (
-        <SwapTableModal
-          isOpen={showSwapTable}
-          onClose={() => setShowSwapTable(false)}
-          targetBook={activeBook}
-          onConfirm={() => { setShowSwapTable(false); setShowQR(true); }}
-        />
-      )}
 
       {/* QR Code Modal */}
       <AnimatePresence>
@@ -662,6 +987,145 @@ export const Swap: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+      {/* Scanner */}
+      <QRScanner 
+        isOpen={showScanner}
+        onClose={() => setShowScanner(false)}
+        onScan={(data) => {
+          setShowScanner(false);
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.type === 'swap' && parsed.bookId) {
+              executeSwap(parsed.bookId);
+            } else {
+              toast.error('Geçersiz QR kod.');
+            }
+          } catch (err) {
+            toast.error('Karekod okunamadı.');
+          }
+        }}
+      />
+
+      {/* Edebi Harita İstatistik Paneli */}
+      {mapMode === 'literary' && (
+        <motion.section variants={item} className="space-y-4 border-t border-ink/10 pt-6">
+          <div>
+            <h3 className="text-xl font-serif text-ink tracking-tight flex items-center gap-2">
+              <MapIcon className="text-karma" /> Şehirlere Göre Edebi Eğilimler
+            </h3>
+            <p className="text-xs text-ink/60 mt-1">Kitapların sahiplerinin konumları ve gerçekleştirdikleri takasların şeceresinden elde edilen dinamik okuma verileri.</p>
+          </div>
+
+          {dynamicLiteraryZones.length === 0 ? (
+            <div className="p-8 text-center bg-white/85 rounded-2xl border border-ink/5 shadow-sm">
+              <p className="text-sm font-medium text-ink/60">Henüz haritada gösterilecek yeterli veri yok.</p>
+              <p className="text-xs text-ink/40 mt-1">Kütüphanenize kitap ekleyerek veya kitap takası gerçekleştirerek edebi haritayı beslemeye başlayabilirsiniz!</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {dynamicLiteraryZones.map(zone => (
+                <div key={zone.label} className="bg-white/90 p-4 rounded-2xl border border-ink/5 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ background: zone.color, boxShadow: `0 0 8px ${zone.color}` }} />
+                      <h4 className="font-bold text-sm text-ink">{zone.label}</h4>
+                    </div>
+                    <span className="text-[10px] font-bold text-ink/40 uppercase bg-ink/5 px-2 py-1 rounded-md">{zone.totalCount} Kitap/Takas</span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-end text-xs">
+                      <span className="text-ink/60">En Popüler: <strong className="text-ink font-bold">{zone.genre}</strong></span>
+                      <span className="font-bold text-karma text-[13px]">{zone.percentage}%</span>
+                    </div>
+                    <div className="w-full bg-ink/5 h-2 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-500" style={{ width: `${zone.percentage}%`, background: zone.color }} />
+                    </div>
+                  </div>
+
+                  <div className="border-t border-ink/5 pt-2">
+                    <details className="group cursor-pointer">
+                      <summary className="text-[10px] font-bold text-ink/40 uppercase tracking-wider flex items-center justify-between select-none">
+                        <span>Tür Dağılımını Göster</span>
+                        <span className="transition-transform group-open:rotate-180">▼</span>
+                      </summary>
+                      <div className="mt-2 space-y-1.5 max-h-24 overflow-y-auto pr-1 pt-1">
+                        {zone.genresBreakdown.map(item => (
+                          <div key={item.genre} className="flex justify-between items-center text-[10px]">
+                            <span className="text-ink/75 font-medium">{item.genre}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-ink/40">{item.count} adet</span>
+                              <span className="font-semibold text-ink/80">{item.percentage}%</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </motion.section>
+      )}
+
+      {/* Gezgin Günlüğü ve Başarımlar Panel */}
+      {mapMode === 'atlas' && (
+        <motion.section variants={item} className="space-y-4 border-t border-ink/10 pt-6">
+          <div>
+            <h3 className="text-xl font-serif text-ink tracking-tight flex items-center gap-2">
+              <Compass className="text-purple-600" /> Gezgin Günlüğü & Başarımlar
+            </h3>
+            <p className="text-xs text-ink/60 mt-1">Ziyaret ettiğiniz kurgusal mekânlar ve kazandığınız edebi ünvanlar.</p>
+          </div>
+
+          {/* Visited Logs */}
+          <div className="bg-white/85 p-4 rounded-2xl border border-ink/5 shadow-sm">
+            <h4 className="text-xs font-bold text-ink/40 uppercase tracking-widest mb-3">Ziyaret Defteri</h4>
+            {visitedCheckpoints.length === 0 ? (
+              <p className="text-xs text-ink/50 text-center py-4 italic">Henüz hiçbir kurgusal sahneyi ziyaret etmediniz. Konumunuza en yakın sahneleri haritadan bularak oraya fiziksel olarak (veya simülasyonla) gidin!</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
+                {visitedCheckpoints.map(key => {
+                  const [bookId, locIdxStr] = key.split('-');
+                  const locIdx = parseInt(locIdxStr, 10);
+                  const b = booksForGezgin.find(x => x.id === bookId);
+                  const loc = b?.storyLocations?.[locIdx];
+                  if (!b || !loc) return null;
+                  return (
+                    <div key={key} className="p-3 bg-purple-50/50 rounded-xl border border-purple-100 flex items-start gap-2.5">
+                      <span className="text-base flex-shrink-0">📍</span>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold text-ink truncate">{loc.name}</p>
+                        <p className="text-[10px] text-ink/65 truncate">{b.title} — {b.author}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Badges Carousel/Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {achievements.map(badge => (
+              <div
+                key={badge.id}
+                className={`p-4 rounded-2xl border flex flex-col items-center text-center transition-all ${badge.unlocked ? 'bg-gradient-to-br from-amber-50 to-amber-100/50 border-amber-200 shadow-sm' : 'bg-gray-50/55 border-gray-150 opacity-55'}`}
+              >
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl mb-2 ${badge.unlocked ? 'bg-amber-200/50 animate-pulse' : 'bg-gray-200/50'}`}>
+                  {badge.icon}
+                </div>
+                <h5 className={`text-xs font-bold ${badge.unlocked ? 'text-amber-800' : 'text-ink/60'}`}>{badge.name}</h5>
+                <p className="text-[9px] text-ink/50 mt-1 leading-snug">{badge.description}</p>
+                {badge.unlocked && (
+                  <span className="text-[8px] font-bold text-amber-700 bg-amber-200/40 px-2 py-0.5 rounded-full mt-2">KAZANILDI</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </motion.section>
+      )}
     </motion.div>
   );
 };

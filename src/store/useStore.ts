@@ -45,7 +45,9 @@ export const useStore = create<StoreState>()((...a) => ({
         .select('*, book_lineage(*), profiles(lat, lng)');
         
       if (!booksError && booksData) {
-        set({ books: booksData.map(b => get().mapDBBookToState(b as DBBook, profile?.lat, profile?.lng)) });
+        const FAKE_USER_IDS = ['11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222'];
+        const filteredBooks = booksData.filter(b => !FAKE_USER_IDS.includes(b.owner_id));
+        set({ books: filteredBooks.map(b => get().mapDBBookToState(b as DBBook, profile?.lat, profile?.lng)) });
       }
 
       // 3. Fetch Scriptums with Profiles
@@ -53,12 +55,22 @@ export const useStore = create<StoreState>()((...a) => ({
         .from('scriptums')
         .select(`
           *,
-          profiles:user_id(name, avatar_url)
+          profiles:user_id(name, avatar_url),
+          scriptum_replies(*, profiles:user_id(name, avatar_url)),
+          scriptum_likes(user_id)
         `)
         .order('created_at', { ascending: false });
         
-        if (!scriptumsError && scriptumsData) {
-        set({ scriptums: scriptumsData.map(s => get().mapDBScriptumToState(s as DBScriptum)) });
+      if (!scriptumsError && scriptumsData) {
+        const FAKE_USER_IDS = ['11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222'];
+        const filteredScriptums = scriptumsData.filter(s => !FAKE_USER_IDS.includes(s.user_id));
+        const cleanedScriptums = filteredScriptums.map(s => {
+          if (s.scriptum_replies) {
+            s.scriptum_replies = s.scriptum_replies.filter((r: any) => !FAKE_USER_IDS.includes(r.user_id));
+          }
+          return s;
+        });
+        set({ scriptums: cleanedScriptums.map(s => get().mapDBScriptumToState(s as DBScriptum)) });
       }
 
       // 4. Fetch Incoming Swap Requests

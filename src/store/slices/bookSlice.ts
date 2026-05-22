@@ -1,9 +1,8 @@
 import type { StateCreator } from 'zustand';
 import { supabase } from '../../lib/supabase';
-import { mockBooks } from '../../mockData';
-import type { Book, LineageEntry } from '../../mockData';
+import type { Book, LineageEntry } from '../../types/models';
 import type { DBBook } from '../../types/database.types';
-import { calculateDistance } from '../../lib/location';
+import { calculateDistance, getCityFromCoords } from '../../lib/location';
 import toast from 'react-hot-toast';
 import type { UserSlice } from './userSlice';
 import type { SwapChat } from './uiSlice';
@@ -43,27 +42,16 @@ export interface BookSlice {
   fetchSwapChatPayload: (swapRequestId: string) => Promise<SwapChat | null>;
   openSwapChatById: (swapRequestId: string, opts?: { goToChatTab?: boolean }) => Promise<void>;
   endSwapChat: (swapRequestId: string) => Promise<void>;
-  respondToSwapRequest: (requestId: string, accept: boolean) => Promise<void>;
+  respondToSwapRequest: (requestId: string, accept: boolean, offeredBookId?: string) => Promise<void>;
   updateReadingProgress: (bookId: string, progress: number) => Promise<void>;
   mapDBBookToState: (dbBook: DBBook, userLat?: number, userLng?: number) => Book;
 }
 
 export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSlice> = (set, get) => ({
-  books: mockBooks,
+  books: [],
   requestedSwaps: [],
   openSwapChats: [],
-  incomingRequests: [
-    {
-      id: 'mock-req-1',
-      bookId: 'b1',
-      bookTitle: 'Körlük',
-      requesterName: 'Caner Öz',
-      requesterAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026024d',
-      requesterId: 'u2',
-      status: 'pending' as const,
-      createdAt: new Date().toISOString(),
-    }
-  ],
+  incomingRequests: [],
 
   mapDBBookToState: (dbBook, userLat, userLng): Book => {
     const ownerLat = dbBook.profiles?.lat || dbBook.lat;
@@ -79,6 +67,7 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
       title: dbBook.title,
       author: dbBook.author,
       cover: dbBook.cover_url,
+      genre: dbBook.genre || 'Diğer',
       condition: dbBook.condition as Book['condition'],
       pace: dbBook.pace as Book['pace'],
       depth: dbBook.depth as Book['depth'],
@@ -90,6 +79,8 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
         ownerName: l.owner_name
       })) : [],
       progress: dbBook.progress,
+      lat: ownerLat || undefined,
+      lng: ownerLng || undefined,
       timeCapsule: dbBook.time_capsule_message ? {
         message: dbBook.time_capsule_message,
         from: dbBook.time_capsule_from || 'Anonim'
@@ -107,6 +98,7 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
         title: bookData.title,
         author: bookData.author,
         cover_url: bookData.cover || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=400',
+        genre: bookData.genre || 'Diğer',
         condition: bookData.condition || 'Good',
         pace: bookData.pace || 'Medium',
         depth: bookData.depth || 'Medium',
@@ -134,6 +126,7 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
         title: updates.title,
         author: updates.author,
         cover_url: updates.cover,
+        genre: updates.genre,
         condition: updates.condition,
         pace: updates.pace,
         depth: updates.depth
@@ -181,7 +174,7 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
       toast.loading('Takas gerçekleştiriliyor...', { id: 'swapBook' });
 
       const dateStr = new Date().toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
-      const cityStr = 'Parşömen Ağı'; 
+      const cityStr = user.lat != null && user.lng != null ? getCityFromCoords(user.lat, user.lng) : 'İstanbul'; 
       
       const { error: rpcError } = await supabase.rpc('swap_book', {
         p_book_id: bookId,
@@ -213,10 +206,16 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
     }
   },
 
-  requestSwap: async (bookId) => {
+    requestSwap: async (bookId) => {
     try {
       const { user, books } = get();
       if (!user) { toast.error('Giriş yapman gerekiyor.'); return; }
+
+      const myBooks = books.filter(b => b.ownerId === user.id);
+      if (myBooks.length === 0) {
+        toast.error('Takas talep edebilmek için kütüphanende en az bir kitabın olmalı.');
+        return;
+      }
 
       const book = books.find(b => b.id === bookId);
       if (!book) return;
@@ -403,15 +402,20 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
     }
   },
 
-  respondToSwapRequest: async (requestId, accept) => {
+  respondToSwapRequest: async (requestId, accept, offeredBookId) => {
     try {
       const newStatus = accept ? 'accepted' : 'rejected';
       const { incomingRequests } = get();
       const req = incomingRequests.find(r => r.id === requestId);
 
+      const updateData: any = { status: newStatus };
+      if (accept && offeredBookId) {
+        updateData.offered_book_id = offeredBookId;
+      }
+
       const { error } = await supabase
         .from('swap_requests')
-        .update({ status: newStatus })
+        .update(updateData)
         .eq('id', requestId);
 
       if (error) throw error;

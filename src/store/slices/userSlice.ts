@@ -1,7 +1,6 @@
 import type { StateCreator } from 'zustand';
 import { supabase } from '../../lib/supabase';
-import { currentUser } from '../../mockData';
-import type { User } from '../../mockData';
+import type { User } from '../../types/models';
 import type { DBProfile } from '../../types/database.types';
 import toast from 'react-hot-toast';
 import { moderateImage } from '../../lib/moderation';
@@ -17,7 +16,7 @@ export interface UserSlice {
 }
 
 export const createUserSlice: StateCreator<UserSlice, [], [], UserSlice> = (set, get) => ({
-  user: currentUser,
+  user: null as unknown as User,
   viewedUser: null,
   
   setViewedUser: (user) => set({ viewedUser: user }),
@@ -112,7 +111,9 @@ export const createUserSlice: StateCreator<UserSlice, [], [], UserSlice> = (set,
         .limit(10);
         
       if (error) throw error;
-      return (data as DBProfile[] || []).map(get().mapDBUserToState);
+      const FAKE_USER_IDS = ['11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222'];
+      const filtered = (data as DBProfile[] || []).filter(p => !FAKE_USER_IDS.includes(p.id));
+      return filtered.map(get().mapDBUserToState);
     } catch (error) {
       console.error("Error searching users:", error);
       toast.error('Okurlar aranırken bir sorun oluştu.');

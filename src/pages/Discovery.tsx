@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, SlidersHorizontal, Users, Book as BookIcon, BookOpen, Radio, Clock, Lock, X, Plus, Star } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import type { User, Room } from '../mockData';
-import { mockRooms } from '../mockData';
+import type { User, Room } from '../types/models';
 import toast from 'react-hot-toast';
 
 // Karma threshold required to create a room
@@ -16,7 +15,7 @@ export const Discovery: React.FC = () => {
   const [searchTab, setSearchTab] = useState<'books' | 'users' | 'rooms'>('books');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
-  const [rooms, setRooms] = useState<Room[]>(mockRooms);
+  const [rooms, setRooms] = useState<Room[]>([]);
   const [showCreateRoom, setShowCreateRoom] = useState(false);
   const [newRoom, setNewRoom] = useState({ title: '', type: 'Sessiz Okuma' as Room['type'], time: '', maxParticipants: 20 });
   const [joinedRooms, setJoinedRooms] = useState<Set<string>>(new Set());

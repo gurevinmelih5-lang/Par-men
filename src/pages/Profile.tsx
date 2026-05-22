@@ -6,6 +6,7 @@ import { Shield, BookOpen, MessageSquare, Award, Plus, MapPin, Edit2, Trash2, Mo
 import { AddBookModal } from '../components/AddBookModal';
 import { EditBookModal } from '../components/EditBookModal';
 import { UserManual } from '../components/UserManual';
+import { SwapTableModal } from '../components/SwapTableModal';
 import { getCurrentLocation } from '../lib/location';
 import imageCompression from 'browser-image-compression';
 import { supabase } from '../lib/supabase';
@@ -23,6 +24,7 @@ export const Profile: React.FC = () => {
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);
   const [isManualOpen, setIsManualOpen] = useState(false);
   const [editingBook, setEditingBook] = useState<any>(null);
+  const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -332,10 +334,10 @@ export const Profile: React.FC = () => {
                   {/* Action buttons */}
                   <div className="flex gap-2 p-3">
                     <button
-                      onClick={() => respondToSwapRequest(req.id, true)}
+                      onClick={() => setSelectedRequest(req)}
                       className="flex-1 bg-ink text-white py-2.5 rounded-xl text-xs font-bold hover:bg-ink/80 transition-colors flex items-center justify-center gap-1.5"
                     >
-                      <CheckCircle size={14} /> Kabul Et
+                      <CheckCircle size={14} /> İncele ve Kabul Et
                     </button>
                     <button
                       onClick={() => respondToSwapRequest(req.id, false)}
@@ -529,6 +531,7 @@ export const Profile: React.FC = () => {
       <AddBookModal isOpen={isBookModalOpen} onClose={() => setIsBookModalOpen(false)} />
       <EditBookModal isOpen={!!editingBook} onClose={() => setEditingBook(null)} book={editingBook} />
       <UserManual isOpen={isManualOpen} onClose={() => setIsManualOpen(false)} />
+      <SwapTableModal isOpen={!!selectedRequest} onClose={() => setSelectedRequest(null)} request={selectedRequest} />
     </motion.div>
   );
 };

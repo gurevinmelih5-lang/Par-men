@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Book, Upload } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { supabase } from '../lib/supabase';
-import type { Book as BookType } from '../mockData';
+import type { Book as BookType } from '../types/models';
 import imageCompression from 'browser-image-compression';
 
 interface EditBookModalProps {
@@ -19,6 +19,7 @@ export const EditBookModal: React.FC<EditBookModalProps> = ({ isOpen, onClose, b
     title: '',
     author: '',
     cover: '',
+    genre: '',
     condition: 'Good' as any,
     pace: 'Medium' as any,
     depth: 'Medium' as any
@@ -32,6 +33,7 @@ export const EditBookModal: React.FC<EditBookModalProps> = ({ isOpen, onClose, b
         title: book.title,
         author: book.author,
         cover: book.cover,
+        genre: book.genre || 'Diğer',
         condition: book.condition,
         pace: book.pace,
         depth: book.depth
@@ -137,6 +139,29 @@ export const EditBookModal: React.FC<EditBookModalProps> = ({ isOpen, onClose, b
                   onChange={e => setFormData({...formData, author: e.target.value})}
                   className="w-full bg-white border border-ink/10 py-3 px-4 rounded-xl text-ink font-medium focus:outline-none focus:border-karma transition-all" 
                 />
+              </div>
+              
+              <div>
+                <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1">Tür</label>
+                <select 
+                  required
+                  value={formData.genre}
+                  onChange={e => setFormData({...formData, genre: e.target.value})}
+                  className="w-full bg-white border border-ink/10 py-3 px-4 rounded-xl text-ink font-medium focus:outline-none focus:border-karma transition-all"
+                >
+                  <option value="" disabled>Tür Seçin (Zorunlu)</option>
+                  <option value="Roman">Roman</option>
+                  <option value="Bilim Kurgu">Bilim Kurgu</option>
+                  <option value="Tarih">Tarih</option>
+                  <option value="Felsefe">Felsefe</option>
+                  <option value="Psikoloji">Psikoloji</option>
+                  <option value="Şiir">Şiir</option>
+                  <option value="Biyografi">Biyografi</option>
+                  <option value="Sanat">Sanat</option>
+                  <option value="Kişisel Gelişim">Kişisel Gelişim</option>
+                  <option value="Polisiye">Polisiye</option>
+                  <option value="Diğer">Diğer</option>
+                </select>
               </div>
               
               <div>

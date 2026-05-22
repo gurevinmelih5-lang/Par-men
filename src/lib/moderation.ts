@@ -1,7 +1,9 @@
 // src/lib/moderation.ts
 
 const PROFANITY_LIST = [
-  'amk', 'aq', 'siktir', 'piç', 'oç', 'pezevenk', 'göt', 'ibne', 'yavşak', 'orospu', 'sik', 'yarrak'
+  'amk', 'aq', 'siktir', 'piç', 'oç', 'pezevenk', 'göt', 'ibne', 'yavşak', 'orospu', 'sik', 'yarrak',
+  'amına', 'koduğum', 'sikeyim', 'siktiğim', 'gavat', 'kahpe', 'fahişe', 'puşt', 'yarak', 'yarrrak',
+  'fuck', 'shit', 'bitch', 'asshole', 'cunt', 'dick', 'pussy', 'whore', 'slut', 'bastard', 'motherfucker'
 ];
 
 /**
