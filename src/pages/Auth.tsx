@@ -101,14 +101,14 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F0E6] flex justify-center items-center p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-[#F5F0E6] flex justify-center items-end sm:items-center relative overflow-hidden">
       <div className="absolute top-0 left-0 w-64 h-64 bg-karma/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-ink/5 rounded-full blur-3xl translate-x-1/3 translate-y-1/3" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-sm bg-parchment-light p-8 rounded-3xl shadow-2xl shadow-ink/10 relative z-10 border border-ink/5"
+        className="w-full max-w-sm bg-parchment-light px-6 pt-8 pb-12 sm:pb-8 sm:rounded-3xl shadow-2xl shadow-ink/10 relative z-10 border border-ink/5 rounded-t-3xl"
       >
         <div className="flex justify-center mb-8">
           <div className="w-16 h-16 bg-ink text-parchment-light rounded-2xl flex items-center justify-center shadow-lg transform rotate-3">

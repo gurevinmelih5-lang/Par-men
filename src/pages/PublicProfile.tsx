@@ -46,13 +46,13 @@ export const PublicProfile: React.FC = () => {
       <header className="p-4 flex items-center justify-between relative z-10">
         <button 
           onClick={() => goBack()}
-          className="p-2 bg-white rounded-full shadow-sm text-ink/60 hover:text-ink transition-colors"
+          className="p-2 bg-white rounded-full shadow-sm text-ink/60 active:text-ink transition-colors tap-target"
         >
           <ChevronLeft size={24} />
         </button>
       </header>
 
-      <div className="px-6 -mt-4">
+      <div className="px-4 -mt-2">
         {/* Profile Header */}
         <motion.div variants={item} className="flex flex-col items-center text-center mb-8">
           <div className="relative mb-4">

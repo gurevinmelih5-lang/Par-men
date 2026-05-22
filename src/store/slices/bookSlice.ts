@@ -406,35 +406,87 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
 
   respondToSwapRequest: async (requestId, accept, offeredBookId) => {
     try {
-      const newStatus = accept ? 'accepted' : 'rejected';
-      const { incomingRequests } = get();
+      const { incomingRequests, user } = get();
       const req = incomingRequests.find(r => r.id === requestId);
+      if (!req) throw new Error('Takas talebi bulunamadı.');
 
-      const updateData: any = { status: newStatus };
-      if (accept && offeredBookId) {
-        updateData.offered_book_id = offeredBookId;
-      }
+      if (accept) {
+        if (!offeredBookId) {
+          throw new Error('Takas için karşı taraftan bir kitap seçilmelidir.');
+        }
+        if (!user) {
+          throw new Error('Giriş yapmanız gerekmektedir.');
+        }
 
-      const { error } = await supabase
-        .from('swap_requests')
-        .update(updateData)
-        .eq('id', requestId);
+        // Alıcı (requester) profil bilgilerini çekerek koordinatlarını al
+        const { data: requesterProfile, error: profileError } = await supabase
+          .from('profiles')
+          .select('name, lat, lng')
+          .eq('id', req.requesterId)
+          .single();
 
-      if (error) throw error;
+        if (profileError || !requesterProfile) {
+          throw new Error('Alıcı profil bilgileri veritabanından çekilemedi.');
+        }
 
-      set(state => ({
-        incomingRequests: state.incomingRequests.filter(r => r.id !== requestId)
-      }));
+        // Şehir bilgilerini koordinatlara göre belirle
+        const requesterCity = requesterProfile.lat != null && requesterProfile.lng != null
+          ? getCityFromCoords(Number(requesterProfile.lat), Number(requesterProfile.lng))
+          : 'İstanbul';
+        
+        const ownerCity = user.lat != null && user.lng != null
+          ? getCityFromCoords(user.lat, user.lng)
+          : 'İstanbul';
 
-      if (accept && req) {
+        const dateStr = new Date().toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+
+        // Veritabanı üzerinde güvenli iki yönlü takası gerçekleştir (RPC)
+        const { error: rpcError } = await supabase.rpc('execute_two_way_book_swap', {
+          p_swap_request_id: requestId,
+          p_offered_book_id: offeredBookId,
+          p_owner_city: ownerCity,
+          p_requester_city: requesterCity,
+          p_date: dateStr
+        });
+
+        if (rpcError) throw rpcError;
+
+        // Kullanıcı karmalarını güncelle (Fiziksel karma +5, Sosyal karma +10)
+        const newPhysical = user.karma.physical + 5;
+        const newSocial = user.karma.social + 10;
+        await supabase
+          .from('profiles')
+          .update({ karma_physical: newPhysical, karma_social: newSocial })
+          .eq('id', user.id);
+
         set(state => ({
-          requestedSwaps: state.requestedSwaps.filter(id => id !== req.bookId),
+          incomingRequests: state.incomingRequests.filter(r => r.id !== requestId),
+          requestedSwaps: state.requestedSwaps.filter(id => id !== req.bookId)
         }));
 
         await get().openSwapChatById(requestId, { goToChatTab: true });
+
+        // Tüm verileri yenile (böylece kütüphanelerdeki yer değişimi ve yeni lineage kayıtları yansır)
+        const rootStore = get() as any;
+        if (rootStore.fetchInitialData) {
+          await rootStore.fetchInitialData();
+        }
+
         toast.success('Takas kabul edildi! Sohbet açıldı.');
       } else {
-        toast.success(accept ? 'Takas isteği kabul edildi!' : 'Takas isteği reddedildi.');
+        // Talebi reddet
+        const { error } = await supabase
+          .from('swap_requests')
+          .update({ status: 'rejected' })
+          .eq('id', requestId);
+
+        if (error) throw error;
+
+        set(state => ({
+          incomingRequests: state.incomingRequests.filter(r => r.id !== requestId)
+        }));
+
+        toast.success('Takas isteği reddedildi.');
       }
     } catch (error: any) {
       console.error('Error responding to swap request:', error);

@@ -65,10 +65,10 @@ export const ScriptumFeed: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-parchment-light pb-24 pt-4 px-4 touch-manipulation">
-      <header className="mb-6 flex items-center gap-3">
-        <Layers className="text-karma" size={28} />
+      <header className="mb-5 flex items-center gap-3">
+        <Layers className="text-karma" size={24} />
         <div>
-          <h1 className="font-serif text-2xl font-bold text-ink">Akış</h1>
+          <h1 className="font-serif text-xl sm:text-2xl font-bold text-ink">Akış</h1>
           <p className="text-xs text-ink/60">Okurların düşünceleri ve katmanları</p>
         </div>
       </header>

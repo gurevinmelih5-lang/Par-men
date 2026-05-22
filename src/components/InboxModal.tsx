@@ -22,14 +22,15 @@ export const InboxModal: React.FC<InboxModalProps> = ({ isOpen, onClose }) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-ink/60 backdrop-blur-sm z-[80] flex items-center justify-center sm:p-6 p-4"
+        className="fixed inset-0 bg-ink/60 backdrop-blur-sm z-[80] flex items-end justify-center"
         onClick={onClose}
       >
         <motion.div
-          initial={{ y: 20, scale: 0.95 }}
+          initial={{ y: 20, scale: 0.98 }}
           animate={{ y: 0, scale: 1 }}
-          exit={{ y: 20, scale: 0.95 }}
-          className="bg-parchment-light w-full max-w-md rounded-3xl flex flex-col shadow-2xl overflow-hidden max-h-[80vh]"
+          exit={{ y: 20, scale: 0.98 }}
+          className="bg-parchment-light w-full max-w-md rounded-t-3xl sm:rounded-3xl flex flex-col shadow-2xl overflow-hidden"
+          style={{ maxHeight: '85dvh', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
           onClick={e => e.stopPropagation()}
         >
           {/* Header */}

@@ -90,13 +90,13 @@ export const BookDetail: React.FC = () => {
       </header>
 
       {/* Book Cover Background */}
-      <div className="relative h-[45vh] bg-ink">
+      <div className="relative h-[40vh] sm:h-[45vh] bg-ink">
         <img src={book.cover} alt={book.title} className="w-full h-full object-cover opacity-60" />
         <div className="absolute inset-0 bg-gradient-to-t from-parchment-light via-parchment-light/20 to-transparent" />
       </div>
 
       {/* Content */}
-      <div className="px-6 relative z-10 -mt-20 space-y-6 pb-24">
+      <div className="px-4 sm:px-6 relative z-10 -mt-16 space-y-5 pb-24">
         <div className="bg-white p-6 rounded-3xl shadow-xl shadow-ink/5 border border-ink/5 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-24 h-24 bg-parchment-dark/30 rounded-bl-full -mr-6 -mt-6" />
           <h1 className="text-3xl font-serif text-ink font-bold leading-tight mb-1">{book.title}</h1>
@@ -123,10 +123,11 @@ export const BookDetail: React.FC = () => {
         <div className="space-y-4">
           <h2 className="font-serif text-xl font-bold">Kitap Hakkında</h2>
           <p className="text-ink/80 text-sm leading-relaxed font-serif">
-            Körlük, körlüğün salgın bir hastalık gibi yayıldığı bir toplumda korku ve paniğin hakim olmasını 
-            anlatır. İlk körleşen adam, ardından onu tedavi eden doktor ve giderek herkes bu salgına yakalanır.
-            Saramago, insan doğasının en karanlık yönlerini ve hayatta kalma mücadelesini sarsıcı bir dille 
-            gözler önüne seriyor.
+            {`"${book.title}", ${book.author} tarafından kaleme alınmış, ${book.genre?.toLowerCase() || 'diğer'} türünde bir eserdir. Parşömen topluluğu içerisinde seyahat eden bu kitap, okuyucuya ${
+              book.pace === 'Slow' ? 'sakin ve derinlemesine' : book.pace === 'Fast' ? 'hızlı ve sürükleyici' : 'dengeli'
+            } bir okuma temposu ile ${
+              book.depth === 'High' ? 'yüksek düşünsel' : book.depth === 'Low' ? 'akıcı ve hafif' : 'keyifli bir edebi'
+            } derinlik sunmaktadır.`}
           </p>
         </div>
 

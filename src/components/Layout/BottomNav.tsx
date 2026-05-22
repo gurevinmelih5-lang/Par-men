@@ -15,8 +15,11 @@ export const BottomNav: React.FC = () => {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-parchment-light border-t border-ink/10 z-50 pb-safe touch-manipulation">
-      <div className="max-w-md mx-auto flex justify-around items-stretch min-h-[calc(4rem+env(safe-area-inset-bottom,0px))]">
+    <nav
+      className="fixed bottom-0 left-0 right-0 bg-parchment-light border-t border-ink/10 z-50 no-select"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+    >
+      <div className="max-w-md mx-auto flex justify-around items-stretch" style={{ minHeight: '56px' }}>
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -26,20 +29,27 @@ export const BottomNav: React.FC = () => {
               type="button"
               onClick={() => setActiveTab(tab.id)}
               className={clsx(
-                "flex flex-col items-center justify-center w-full min-h-[48px] flex-1 space-y-1 transition-colors duration-200 relative active:opacity-80",
-                isActive ? "text-ink" : "text-ink/40 hover:text-ink/60"
+                'flex flex-col items-center justify-center w-full flex-1 space-y-0.5 transition-all duration-200 relative active:scale-90 tap-target',
+                isActive ? 'text-ink' : 'text-ink/40'
               )}
             >
               <div className="relative">
-                <Icon size={24} strokeWidth={isActive ? 2.5 : 2} />
+                <Icon
+                  size={22}
+                  strokeWidth={isActive ? 2.5 : 2}
+                  className={clsx('transition-transform duration-150', isActive && 'scale-110')}
+                />
                 {tab.id === 'profile' && openSwapChats.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-500 rounded-full border border-parchment-light" />
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full border border-parchment-light" />
                 )}
                 {tab.id === 'swap' && requestedSwaps.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-parchment-light" />
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border border-parchment-light" />
                 )}
               </div>
-              <span className="text-[10px] font-medium tracking-wider uppercase">
+              <span className={clsx(
+                'text-[9px] font-bold tracking-widest uppercase transition-all duration-200',
+                isActive ? 'opacity-100' : 'opacity-60'
+              )}>
                 {tab.label}
               </span>
             </button>

@@ -88,14 +88,14 @@ export const Dashboard: React.FC = () => {
 
   return (
     <motion.div 
-      className="p-6 pb-28 space-y-8"
+      className="px-4 pt-6 pb-28 space-y-6"
       variants={container}
       initial="hidden"
       animate="show"
     >
       <motion.header variants={item}>
-        <h1 className="text-3xl font-serif text-ink tracking-tight">Merhaba, {user.name.split(' ')[0]}</h1>
-        <p className="text-ink/60 mt-2 font-sans text-sm flex items-center gap-1">
+        <h1 className="text-2xl sm:text-3xl font-serif text-ink tracking-tight">Merhaba, {user.name.split(' ')[0]}</h1>
+        <p className="text-ink/60 mt-1.5 font-sans text-sm flex items-center gap-1">
           Parşömen'in sayfaları bugün senin için açılıyor.
           {isLocating && <span className="animate-pulse ml-2 text-karma/60 flex items-center gap-1"><MapPin size={12}/> Konum güncelleniyor...</span>}
         </p>
@@ -210,11 +210,11 @@ export const Dashboard: React.FC = () => {
           </span>
         </div>
         
-        <div className="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6 snap-x" style={{ scrollbarWidth: 'none' }}>
+        <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4 snap-x scroll-touch" style={{ scrollbarWidth: 'none' }}>
           {nearBooks.map(book => (
             <div 
               key={book.id} 
-              className="min-w-[200px] snap-center bg-white p-3 rounded-xl shadow-sm border border-ink/5 flex-shrink-0 hover:shadow-md transition-shadow relative"
+              className="min-w-[160px] snap-center bg-white p-3 rounded-xl shadow-sm border border-ink/5 flex-shrink-0 active:shadow-md transition-shadow relative"
             >
               <div 
                 className="relative h-32 mb-3 rounded-lg overflow-hidden bg-parchment-dark cursor-pointer group"

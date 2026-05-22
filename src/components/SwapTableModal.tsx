@@ -81,6 +81,7 @@ export const SwapTableModal: React.FC<SwapTableModalProps> = ({ isOpen, onClose,
           exit={{ y: '100%' }}
           transition={{ type: "spring", damping: 25, stiffness: 200 }}
           className="bg-parchment-light w-full max-w-lg sm:rounded-3xl rounded-t-3xl flex flex-col shadow-2xl overflow-hidden"
+          style={{ maxHeight: '92dvh', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
           onClick={e => e.stopPropagation()}
         >
           {/* Header */}
@@ -162,8 +163,8 @@ export const SwapTableModal: React.FC<SwapTableModalProps> = ({ isOpen, onClose,
             </div>
           </div>
 
-          <div className="p-6 bg-parchment-light/30 space-y-4 text-center">
-             <p className="text-sm text-ink/70">
+          <div className="p-4 bg-parchment-light/30 space-y-2 text-center overflow-y-auto scroll-touch">
+             <p className="text-xs sm:text-sm text-ink/70">
                Takas gerçekleşmesi için karşılığında bir kitap seçmelisin. Onayladığında bir sohbet penceresi açılacak ve buluşma yerini ayarlayabileceksiniz.
              </p>
           </div>
@@ -179,7 +180,7 @@ export const SwapTableModal: React.FC<SwapTableModalProps> = ({ isOpen, onClose,
             <button 
               onClick={handleConfirm}
               disabled={!offeredBookId}
-              className={`flex-[2] py-3 rounded-xl font-bold transition-all shadow-md active:scale-[0.98] flex justify-center items-center gap-2 ${offeredBookId ? 'bg-karma text-ink shadow-karma/30 hover:bg-karma/90' : 'bg-ink/10 text-ink/40 cursor-not-allowed'}`}
+              className={`flex-[2] py-3 rounded-xl font-bold transition-all shadow-md active:scale-[0.98] flex justify-center items-center gap-2 ${offeredBookId ? 'bg-karma text-ink shadow-karma/30 active:bg-karma/90' : 'bg-ink/10 text-ink/40 cursor-not-allowed'}`}
             >
               <Check size={18} /> Takası Onayla
             </button>

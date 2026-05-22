@@ -113,14 +113,14 @@ export const Profile: React.FC = () => {
 
   return (
     <motion.div 
-      className="p-6 pb-28 space-y-8"
+      className="px-4 pt-5 pb-28 space-y-6"
       variants={container}
       initial="hidden"
       animate="show"
     >
       <motion.header variants={item} className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-serif text-ink tracking-tight">{user.name}</h1>
+        <h1 className="text-2xl sm:text-3xl font-serif text-ink tracking-tight">{user.name}</h1>
           <div className="flex gap-2 items-center mt-2 flex-wrap">
             <div className={`inline-block text-ink text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-sm ${user.karma.total >= 80 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-white' : 'bg-karma'}`}>
               {title}
@@ -219,7 +219,7 @@ export const Profile: React.FC = () => {
       </motion.section>
 
       {/* Detail Stats */}
-      <motion.section variants={item} className="grid grid-cols-2 gap-4">
+      <motion.section variants={item} className="grid grid-cols-2 gap-3">
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-ink/5">
           <div className="flex items-center gap-2 text-ink/60 mb-2">
             <Shield size={16} />

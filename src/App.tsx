@@ -28,7 +28,17 @@ function App() {
   const toaster = (
     <Toaster
       position="top-center"
-      toastOptions={{ duration: 3000, style: { borderRadius: '16px', background: '#333', color: '#fff' } }}
+      toastOptions={{
+        duration: 3000,
+        style: {
+          borderRadius: '16px',
+          background: '#1A202C',
+          color: '#FDFBF7',
+          fontSize: '14px',
+          maxWidth: '340px',
+          padding: '12px 16px',
+        }
+      }}
     />
   );
 
@@ -154,10 +164,10 @@ function App() {
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -10 }}
-            transition={{ duration: 0.5, ease: 'easeInOut' }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18, ease: 'easeInOut' }}
           >
             {renderContent()}
           </motion.div>

@@ -102,10 +102,11 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -20, scale: 0.98 }}
           transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-          className="w-full max-w-md bg-parchment-light rounded-3xl overflow-hidden shadow-2xl"
+          className="w-full max-w-md bg-parchment-light rounded-t-3xl overflow-hidden shadow-2xl"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         >
           {/* Gradient top area */}
-          <div className={`bg-gradient-to-br ${current.color} p-10 flex flex-col items-center justify-center relative`}>
+          <div className={`bg-gradient-to-br ${current.color} p-8 flex flex-col items-center justify-center relative`}>
             <button
               onClick={handleComplete}
               className="absolute top-4 right-4 text-ink/30 hover:text-ink/60 transition-colors"

@@ -36,14 +36,16 @@ export const AddScriptumModal: React.FC<AddScriptumModalProps> = ({ isOpen, onCl
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-sm flex items-end justify-center"
           onClick={onClose}
         >
           <motion.div 
-            initial={{ scale: 0.9, y: 20 }}
-            animate={{ scale: 1, y: 0 }}
-            exit={{ scale: 0.9, y: 20 }}
-            className="bg-parchment-light w-full max-w-sm rounded-3xl p-6 shadow-2xl"
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+            className="bg-parchment-light w-full max-w-sm rounded-t-3xl p-5 shadow-2xl"
+            style={{ paddingBottom: 'env(safe-area-inset-bottom, 20px)' }}
             onClick={e => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-6">

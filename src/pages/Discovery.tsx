@@ -93,16 +93,16 @@ export const Discovery: React.FC = () => {
   };
 
   return (
-    <motion.div className="p-6 pb-28 space-y-8" variants={container} initial="hidden" animate="show">
+    <motion.div className="px-4 pt-5 pb-28 space-y-6" variants={container} initial="hidden" animate="show">
       <motion.header variants={item}>
-        <h1 className="text-3xl font-serif text-ink tracking-tight">Keşfet</h1>
-        <p className="text-ink/60 mt-2 font-sans text-sm">Ruh haline uygun yeni sayfalar bul.</p>
+        <h1 className="text-2xl sm:text-3xl font-serif text-ink tracking-tight">Keşfet</h1>
+        <p className="text-ink/60 mt-1.5 font-sans text-sm">Ruh haline uygun yeni sayfalar bul.</p>
       </motion.header>
 
 
 
       {/* Search + Tabs Card */}
-      <motion.section variants={item} className="bg-white p-6 rounded-3xl shadow-sm border border-ink/5 space-y-4 relative overflow-hidden">
+      <motion.section variants={item} className="bg-white p-4 rounded-3xl shadow-sm border border-ink/5 space-y-4 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-parchment-dark/30 rounded-bl-full -mr-10 -mt-10" />
 
         {/* Search Input */}
@@ -129,7 +129,7 @@ export const Discovery: React.FC = () => {
         </div>
 
         {/* Tabs */}
-        <div className="relative z-10 flex p-1 bg-parchment-dark/50 rounded-xl overflow-x-auto hide-scrollbar">
+        <div className="relative z-10 flex p-1 bg-parchment-dark/50 rounded-xl overflow-x-auto hide-scrollbar scroll-touch gap-1">
           {(['books', 'users', 'rooms'] as const).map(tab => (
             <button
               key={tab}

@@ -466,18 +466,18 @@ export const Swap: React.FC = () => {
   };
 
   return (
-    <motion.div className="p-6 pb-28 space-y-6" variants={container} initial="hidden" animate="show">
+    <motion.div className="px-4 pt-5 pb-28 space-y-5" variants={container} initial="hidden" animate="show">
       <motion.header variants={item} className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-serif text-ink tracking-tight">Hiper-Lokal Takas</h1>
-          <p className="text-ink/60 mt-2 font-sans text-sm">Yakınındaki güvenli buluşma noktalarında takas yap.</p>
+          <h1 className="text-2xl sm:text-3xl font-serif text-ink tracking-tight">Hiper-Lokal Takas</h1>
+          <p className="text-ink/60 mt-1 font-sans text-xs sm:text-sm">Yakınındaki güvenli buluşma noktalarında takas yap.</p>
         </div>
         <button 
           onClick={() => setShowScanner(true)}
-          className="bg-karma/20 text-karma p-3 rounded-xl hover:bg-karma/30 transition-colors shadow-sm"
+          className="bg-karma/20 text-karma p-3 rounded-xl active:bg-karma/30 transition-colors shadow-sm tap-target"
           title="QR Okut"
         >
-          <ScanLine size={24} />
+          <ScanLine size={22} />
         </button>
       </motion.header>
 
@@ -727,7 +727,7 @@ export const Swap: React.FC = () => {
       })()}
 
       {/* Interactive Map */}
-      <motion.section variants={item} className="relative h-[55vh] rounded-3xl overflow-hidden shadow-inner border border-ink/10" style={{ zIndex: 0 }}>
+      <motion.section variants={item} className="relative rounded-3xl overflow-hidden shadow-inner border border-ink/10" style={{ zIndex: 0, height: '50vw', minHeight: '220px', maxHeight: '340px' }}>
         <MapContainer
           center={[user.lat || 41.0082, user.lng || 28.9784]}
           zoom={13}
@@ -836,7 +836,8 @@ export const Swap: React.FC = () => {
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
-            className="fixed bottom-20 left-4 right-4 p-4 rounded-2xl shadow-xl z-40 bg-white border border-purple-100"
+            className="fixed z-40 p-4 rounded-2xl shadow-xl bg-white border border-purple-100"
+            style={{ bottom: 'calc(3.75rem + env(safe-area-inset-bottom, 0px) + 8px)', left: '16px', right: '16px' }}
           >
             <div className="flex flex-col">
               <div className="flex justify-between items-start mb-3 gap-2">
@@ -904,7 +905,8 @@ export const Swap: React.FC = () => {
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
-            className={`fixed bottom-20 left-4 right-4 p-4 rounded-2xl shadow-xl z-40 flex gap-4 border ${activeBook.isLegendary ? 'bg-gradient-to-r from-ink to-ink/90 text-parchment-light border-karma/40' : 'bg-white border-ink/5'}`}
+            className={`fixed z-40 flex gap-3 border p-3 rounded-2xl shadow-xl ${activeBook.isLegendary ? 'bg-gradient-to-r from-ink to-ink/90 text-parchment-light border-karma/40' : 'bg-white border-ink/5'}`}
+            style={{ bottom: 'calc(3.75rem + env(safe-area-inset-bottom, 0px) + 8px)', left: '16px', right: '16px' }}
           >
             <div className="w-20 h-28 rounded-lg overflow-hidden bg-parchment-dark flex-shrink-0">
               <img src={activeBook.cover} alt={activeBook.title} className="w-full h-full object-cover" />
