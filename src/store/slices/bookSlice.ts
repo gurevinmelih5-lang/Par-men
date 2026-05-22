@@ -43,7 +43,7 @@ export interface BookSlice {
   openSwapChatById: (swapRequestId: string, opts?: { goToChatTab?: boolean }) => Promise<void>;
   endSwapChat: (swapRequestId: string) => Promise<void>;
   respondToSwapRequest: (requestId: string, accept: boolean, offeredBookId?: string) => Promise<void>;
-  updateReadingProgress: (bookId: string, progress: number) => Promise<void>;
+  updateReadingProgress: (bookId: string, progress: number, totalPages: number, currentPage: number) => Promise<void>;
   mapDBBookToState: (dbBook: DBBook, userLat?: number, userLng?: number) => Book;
 }
 
@@ -79,6 +79,8 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
         ownerName: l.owner_name
       })) : [],
       progress: dbBook.progress,
+      totalPages: dbBook.total_pages || undefined,
+      currentPage: dbBook.current_page || undefined,
       lat: ownerLat || undefined,
       lng: ownerLng || undefined,
       timeCapsule: dbBook.time_capsule_message ? {
@@ -264,7 +266,7 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
           requester_id,
           status,
           created_at,
-          books ( title ),
+          books:books!swap_requests_book_id_fkey ( title ),
           profiles!swap_requests_requester_id_fkey ( name, avatar_url )
         `)
         .eq('owner_id', user.id)
@@ -301,7 +303,7 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
           id,
           owner_id,
           requester_id,
-          books ( title, cover_url ),
+          books:books!swap_requests_book_id_fkey ( title, cover_url ),
           requester_p:profiles!swap_requests_requester_id_fkey ( name, avatar_url ),
           owner_p:profiles!swap_requests_owner_id_fkey ( name, avatar_url )
         `)
@@ -342,7 +344,7 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
           requester_id,
           status,
           chat_ended_by,
-          books ( title, cover_url ),
+          books:books!swap_requests_book_id_fkey ( title, cover_url ),
           requester_p:profiles!swap_requests_requester_id_fkey ( id, name, avatar_url ),
           owner_p:profiles!swap_requests_owner_id_fkey ( id, name, avatar_url )
         `)
@@ -434,22 +436,26 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
       } else {
         toast.success(accept ? 'Takas isteği kabul edildi!' : 'Takas isteği reddedildi.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error responding to swap request:', error);
-      toast.error('İşlem başarısız.');
+      toast.error(`İşlem başarısız: ${error?.message || error}`);
     }
   },
 
-  updateReadingProgress: async (bookId, progress) => {
+  updateReadingProgress: async (bookId, progress, totalPages, currentPage) => {
     try {
       // Optimistic update
       set(state => ({
-        books: state.books.map(b => b.id === bookId ? { ...b, progress } : b)
+        books: state.books.map(b => b.id === bookId ? { ...b, progress, totalPages, currentPage } : b)
       }));
 
       const { error } = await supabase
         .from('books')
-        .update({ progress })
+        .update({ 
+          progress,
+          total_pages: totalPages,
+          current_page: currentPage
+        })
         .eq('id', bookId);
         
       if (error) {

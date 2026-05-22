@@ -8,23 +8,43 @@ export const ScriptumFeed: React.FC = () => {
   const { scriptums, books, user, addScriptum, likeScriptum, addReply } = useStore();
   const [newPostContent, setNewPostContent] = useState('');
   const [selectedBookId, setSelectedBookId] = useState<string>('');
+  const [isManualBook, setIsManualBook] = useState(false);
+  const [customBookTitle, setCustomBookTitle] = useState('');
+  const [customBookAuthor, setCustomBookAuthor] = useState('');
   
   const [replyContent, setReplyContent] = useState<Record<string, string>>({});
   const [expandedReplies, setExpandedReplies] = useState<string[]>([]);
 
-  const myBooks = books.filter(b => b.ownerId === user?.id);
+  const uniqueBooks = books.reduce((acc: typeof books, current) => {
+    const isDup = acc.some(b => b.title.toLowerCase() === current.title.toLowerCase() && b.author.toLowerCase() === current.author.toLowerCase());
+    if (!isDup) {
+      acc.push(current);
+    }
+    return acc;
+  }, []).sort((a, b) => a.title.localeCompare(b.title, 'tr'));
 
   const handlePost = async () => {
     if (!newPostContent.trim()) {
       toast.error('Lütfen bir şeyler yazın!');
       return;
     }
+
+    if (isManualBook && !customBookTitle.trim()) {
+      toast.error('Lütfen kitap adını girin!');
+      return;
+    }
+
     await addScriptum({
       content: newPostContent,
       bookId: selectedBookId || undefined,
+      customBookTitle: isManualBook ? customBookTitle.trim() : undefined,
+      customBookAuthor: isManualBook ? customBookAuthor.trim() : undefined,
     });
     setNewPostContent('');
     setSelectedBookId('');
+    setCustomBookTitle('');
+    setCustomBookAuthor('');
+    setIsManualBook(false);
   };
 
   const handleReply = async (scriptumId: string) => {
@@ -64,16 +84,45 @@ export const ScriptumFeed: React.FC = () => {
             className="w-full bg-parchment-light/30 rounded-xl p-3 text-sm outline-none border border-ink/5 focus:border-karma/50 resize-none h-20"
           />
         </div>
+
+        {isManualBook && (
+          <div className="flex flex-col sm:flex-row gap-2 mb-3 pl-13">
+            <input
+              type="text"
+              value={customBookTitle}
+              onChange={(e) => setCustomBookTitle(e.target.value)}
+              placeholder="Kitap Adı..."
+              className="flex-1 bg-parchment-light/50 border border-ink/10 rounded-xl px-3 py-1.5 text-xs text-ink outline-none focus:border-karma/50 font-medium"
+            />
+            <input
+              type="text"
+              value={customBookAuthor}
+              onChange={(e) => setCustomBookAuthor(e.target.value)}
+              placeholder="Yazar..."
+              className="flex-1 bg-parchment-light/50 border border-ink/10 rounded-xl px-3 py-1.5 text-xs text-ink outline-none focus:border-karma/50 font-medium"
+            />
+          </div>
+        )}
+
         <div className="flex items-center justify-between pl-13">
           <div className="relative">
             <select
-              value={selectedBookId}
-              onChange={(e) => setSelectedBookId(e.target.value)}
+              value={isManualBook ? "manual" : selectedBookId}
+              onChange={(e) => {
+                if (e.target.value === "manual") {
+                  setIsManualBook(true);
+                  setSelectedBookId('');
+                } else {
+                  setIsManualBook(false);
+                  setSelectedBookId(e.target.value);
+                }
+              }}
               className="appearance-none bg-parchment-dark/50 text-ink/70 text-[10px] font-bold px-3 py-1.5 rounded-full outline-none border border-ink/5 pl-7 pr-6 cursor-pointer"
             >
               <option value="">(İsteğe bağlı) Kitap Seç</option>
-              {myBooks.map(b => (
-                <option key={b.id} value={b.id}>{b.title}</option>
+              <option value="manual">✍️ Manuel Kitap Bilgisi Gir</option>
+              {uniqueBooks.map(b => (
+                <option key={b.id} value={b.id}>{b.title} — {b.author}</option>
               ))}
             </select>
             <Book size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink/40" />
@@ -120,8 +169,22 @@ export const ScriptumFeed: React.FC = () => {
                 </div>
               )}
 
+              {!book && scriptum.customBookTitle && (
+                <div className="flex items-center gap-3 mb-3 p-2 bg-parchment-light/50 rounded-xl border border-ink/5">
+                  <div className="w-8 h-12 bg-karma/10 rounded flex items-center justify-center border border-ink/5 shadow-sm">
+                    <Book size={16} className="text-karma/60" />
+                  </div>
+                  <div>
+                    <p className="font-serif font-bold text-ink text-xs leading-tight">{scriptum.customBookTitle}</p>
+                    {scriptum.customBookAuthor && (
+                      <p className="font-serif italic text-ink/60 text-[10px]">{scriptum.customBookAuthor}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="relative mb-4 mt-2">
-                {scriptum.bookId && <MessageSquareQuote size={20} className="absolute -top-1 -left-1 text-karma/20" />}
+                {(scriptum.bookId || scriptum.customBookTitle) && <MessageSquareQuote size={20} className="absolute -top-1 -left-1 text-karma/20" />}
                 {scriptum.highlightedText ? (
                   <p
                     className="font-serif text-sm leading-relaxed text-ink/90 italic pl-6"
@@ -133,7 +196,7 @@ export const ScriptumFeed: React.FC = () => {
                     }}
                   />
                 ) : (
-                  <p className={`text-sm leading-relaxed text-ink/90 ${scriptum.bookId ? 'font-serif italic pl-6' : 'font-sans'}`}>
+                  <p className={`text-sm leading-relaxed text-ink/90 ${(scriptum.bookId || scriptum.customBookTitle) ? 'font-serif italic pl-6' : 'font-sans'}`}>
                     {scriptum.content}
                   </p>
                 )}

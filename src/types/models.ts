@@ -48,6 +48,8 @@ export interface Book {
   distance: number; // in km
   lineage: LineageEntry[];
   progress?: number;
+  totalPages?: number;
+  currentPage?: number;
   lat?: number;
   lng?: number;
   timeCapsule?: {
@@ -85,6 +87,8 @@ export interface ScriptumReply {
 export interface Scriptum {
   id: string;
   bookId?: string;
+  customBookTitle?: string;
+  customBookAuthor?: string;
   userId: string;
   userName: string;
   userAvatar: string;

@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
-import { MapPin, BookOpen, Clock, Edit2, Check } from 'lucide-react';
+import { MapPin, BookOpen, Clock, Edit2, Check, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getCurrentLocation } from '../lib/location';
+import toast from 'react-hot-toast';
 
 export const Dashboard: React.FC = () => {
   const { user, books, scriptums, setActiveTab, requestSwap, requestedSwaps, updateReadingProgress, updateLocation, setSelectedBook } = useStore();
   const [isEditingProgress, setIsEditingProgress] = useState(false);
-  const [tempProgress, setTempProgress] = useState(45); // Default matching mock data
+  const [tempTotalPages, setTempTotalPages] = useState<number | string>('');
+  const [tempCurrentPage, setTempCurrentPage] = useState<number | string>('');
   const [isLocating, setIsLocating] = useState(false);
 
   useEffect(() => {
@@ -27,13 +29,42 @@ export const Dashboard: React.FC = () => {
   }, []);
   
   // Get books owned by others, sorted by distance
-  const nearBooks = books.filter(b => b.ownerId !== user.id).sort((a, b) => a.distance - b.distance);
+  const nearBooks = books.filter(b => b.ownerId !== user?.id).sort((a, b) => a.distance - b.distance);
   
   // Find currently reading book (first book owned by user)
-  const currentBook = books.find(b => b.ownerId === user.id) || { id: 'b1', title: 'Körlük', author: 'José Saramago', progress: 45 };
+  const currentBook = books.find(b => b.ownerId === user?.id) || { 
+    id: 'b1', 
+    title: 'Körlük', 
+    author: 'José Saramago', 
+    progress: 45,
+    totalPages: 320,
+    currentPage: 144
+  };
   
+  const totalNum = Number(tempTotalPages) || 0;
+  const currentNum = Number(tempCurrentPage) || 0;
+  const calculatedPercent = totalNum > 0 ? Math.min(100, Math.max(0, Math.round((currentNum / totalNum) * 100))) : 0;
+
   const handleSaveProgress = () => {
-    updateReadingProgress(currentBook.id, tempProgress);
+    if (!currentBook) return;
+    const total = Number(tempTotalPages);
+    const current = Number(tempCurrentPage);
+
+    if (isNaN(total) || total <= 0) {
+      toast.error('Lütfen geçerli bir toplam sayfa sayısı girin.');
+      return;
+    }
+    if (isNaN(current) || current < 0) {
+      toast.error('Lütfen geçerli bir okunan sayfa sayısı girin.');
+      return;
+    }
+    if (current > total) {
+      toast.error('Okunan sayfa sayısı toplam sayfa sayısından büyük olamaz!');
+      return;
+    }
+
+    const calculatedProgress = Math.round((current / total) * 100);
+    updateReadingProgress(currentBook.id, calculatedProgress, total, current);
     setIsEditingProgress(false);
   };
 
@@ -79,28 +110,63 @@ export const Dashboard: React.FC = () => {
             Okuma İlerlemen
           </h2>
           <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-karma">{isEditingProgress ? `${tempProgress}%` : `${currentBook.progress || 0}%`}</span>
+            <span className="text-sm font-bold text-karma">
+              {isEditingProgress ? `${calculatedPercent}%` : `${currentBook.progress || 0}%`}
+            </span>
             {!isEditingProgress ? (
-              <button onClick={() => { setIsEditingProgress(true); setTempProgress(currentBook.progress || 0); }} className="text-ink/40 hover:text-ink transition-colors">
+              <button 
+                onClick={() => { 
+                  setIsEditingProgress(true); 
+                  setTempTotalPages(currentBook.totalPages || ''); 
+                  setTempCurrentPage(currentBook.currentPage || ''); 
+                }} 
+                className="text-ink/40 hover:text-ink transition-colors"
+              >
                 <Edit2 size={14} />
               </button>
             ) : (
-              <button onClick={handleSaveProgress} className="text-green-600 hover:text-green-700 transition-colors">
-                <Check size={16} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={handleSaveProgress} 
+                  className="text-green-600 hover:text-green-700 transition-colors p-1"
+                >
+                  <Check size={16} />
+                </button>
+                <button 
+                  onClick={() => setIsEditingProgress(false)} 
+                  className="text-ink/40 hover:text-ink transition-colors p-1"
+                >
+                  <X size={16} />
+                </button>
+              </div>
             )}
           </div>
         </div>
         
         {isEditingProgress ? (
-          <div className="mb-3 relative z-10 py-1">
-            <input 
-              type="range" 
-              min="0" max="100" 
-              value={tempProgress}
-              onChange={(e) => setTempProgress(parseInt(e.target.value))}
-              className="w-full h-2 bg-parchment-dark rounded-lg appearance-none cursor-pointer accent-karma"
-            />
+          <div className="flex gap-4 mb-4 relative z-10 py-1">
+            <div className="flex-1">
+              <label className="block text-[10px] font-bold text-ink/40 uppercase tracking-wider mb-1">Kaldığın Sayfa</label>
+              <input 
+                type="number"
+                min="0"
+                value={tempCurrentPage}
+                onChange={(e) => setTempCurrentPage(e.target.value === '' ? '' : parseInt(e.target.value))}
+                placeholder="Örn: 144"
+                className="w-full bg-white border border-ink/10 py-2 px-3 rounded-xl text-ink font-medium text-sm focus:outline-none focus:border-karma transition-all"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-[10px] font-bold text-ink/40 uppercase tracking-wider mb-1">Toplam Sayfa</label>
+              <input 
+                type="number"
+                min="1"
+                value={tempTotalPages}
+                onChange={(e) => setTempTotalPages(e.target.value === '' ? '' : parseInt(e.target.value))}
+                placeholder="Örn: 320"
+                className="w-full bg-white border border-ink/10 py-2 px-3 rounded-xl text-ink font-medium text-sm focus:outline-none focus:border-karma transition-all"
+              />
+            </div>
           </div>
         ) : (
           <div className="w-full bg-parchment-dark/50 rounded-full h-2 mb-3 overflow-hidden relative z-10">
@@ -113,14 +179,21 @@ export const Dashboard: React.FC = () => {
           </div>
         )}
         <div className="flex items-center justify-between relative z-10">
-          <p className="text-xs text-ink/60 font-medium">{currentBook.title} — {currentBook.author}</p>
+          <div className="flex flex-col">
+            <p className="text-xs text-ink/60 font-medium">{currentBook.title} — {currentBook.author}</p>
+            {!isEditingProgress && currentBook.currentPage != null && currentBook.totalPages != null && (
+              <p className="text-[10px] text-ink/40 font-medium mt-0.5">
+                {currentBook.currentPage} / {currentBook.totalPages} sayfa okundu
+              </p>
+            )}
+          </div>
           <p className="text-[10px] text-karma font-bold">
-            {(currentBook.progress || 0) === 0 && 'Henüz başlamadın...'}
-            {(currentBook.progress || 0) > 0 && (currentBook.progress || 0) < 25 && '🌱 Yeni başladın!'}
-            {(currentBook.progress || 0) >= 25 && (currentBook.progress || 0) < 50 && '📖 Yarı yoldasın!'}
-            {(currentBook.progress || 0) >= 50 && (currentBook.progress || 0) < 80 && '🔥 Harika gidiyorsun!'}
-            {(currentBook.progress || 0) >= 80 && (currentBook.progress || 0) < 100 && '⚡ Neredeyse bitti!'}
-            {(currentBook.progress || 0) === 100 && '🏆 Tebrikler! Bitirdin!'}
+            {(isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) === 0 && 'Henüz başlamadın...'}
+            {(isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) > 0 && (isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) < 25 && '🌱 Yeni başladın!'}
+            {(isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) >= 25 && (isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) < 50 && '📖 Yarı yoldasın!'}
+            {(isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) >= 50 && (isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) < 80 && '🔥 Harika gidiyorsun!'}
+            {(isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) >= 80 && (isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) < 100 && '⚡ Neredeyse bitti!'}
+            {(isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) === 100 && '🏆 Tebrikler! Bitirdin!'}
           </p>
         </div>
       </motion.section>

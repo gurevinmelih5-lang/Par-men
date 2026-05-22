@@ -30,6 +30,8 @@ export interface DBBook {
   pace: string;
   depth: string;
   progress: number;
+  total_pages: number | null;
+  current_page: number | null;
   owner_id: string;
   distance_km: number;
   time_capsule_message: string | null;
@@ -64,6 +66,8 @@ export interface DBReply {
 export interface DBScriptum {
   id: string;
   book_id: string | null;
+  custom_book_title: string | null;
+  custom_book_author: string | null;
   user_id: string;
   content: string;
   highlighted_text: string | null;

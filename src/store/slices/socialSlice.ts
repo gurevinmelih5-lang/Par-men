@@ -26,6 +26,8 @@ export const createSocialSlice: StateCreator<SocialSlice & UserSlice, [], [], So
     return {
       id: dbScriptum.id,
       bookId: dbScriptum.book_id || undefined,
+      customBookTitle: dbScriptum.custom_book_title || undefined,
+      customBookAuthor: dbScriptum.custom_book_author || undefined,
       userId: dbScriptum.user_id,
       userName: dbScriptum.profiles?.name || 'Anonim',
       userAvatar: dbScriptum.profiles?.avatar_url || 'https://i.pravatar.cc/150',
@@ -58,6 +60,8 @@ export const createSocialSlice: StateCreator<SocialSlice & UserSlice, [], [], So
       toast.loading('Gönderiliyor...', { id: 'addScriptum' });
       const { data, error } = await supabase.from('scriptums').insert({
         book_id: scriptumData.bookId || null,
+        custom_book_title: scriptumData.customBookTitle || null,
+        custom_book_author: scriptumData.customBookAuthor || null,
         user_id: user.id,
         content: scriptumData.content,
         highlighted_text: scriptumData.highlightedText || null
