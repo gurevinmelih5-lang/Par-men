@@ -39,7 +39,7 @@ export const InboxModal: React.FC<InboxModalProps> = ({ isOpen, onClose }) => {
               <Inbox size={18} />
               Gelen Takas Talepleri
             </h2>
-            <button onClick={onClose} className="p-1.5 hover:bg-parchment-light/10 rounded-full transition-colors">
+            <button onClick={onClose} className="w-10 h-10 flex items-center justify-center hover:bg-parchment-light/10 rounded-full transition-colors">
               <X size={20} />
             </button>
           </div>

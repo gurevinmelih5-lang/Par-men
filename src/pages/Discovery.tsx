@@ -4,6 +4,7 @@ import { Search, SlidersHorizontal, Users, Book as BookIcon, BookOpen, Radio, Cl
 import { useStore } from '../store/useStore';
 import type { User, Room } from '../types/models';
 import toast from 'react-hot-toast';
+import { translatePace, translateDepth } from '../lib/translations';
 
 // Karma threshold required to create a room
 const ROOM_CREATION_KARMA_THRESHOLD = 75;
@@ -134,7 +135,7 @@ export const Discovery: React.FC = () => {
             <button
               key={tab}
               onClick={() => { setSearchTab(tab); setSearchQuery(''); }}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] font-bold rounded-lg transition-all duration-200 ${
+              className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-[11px] font-bold rounded-lg transition-all duration-200 ${
                 searchTab === tab ? 'bg-white shadow-sm text-ink' : 'text-ink/60 hover:text-ink'
               }`}
             >
@@ -197,8 +198,8 @@ export const Discovery: React.FC = () => {
                     <h3 className="font-serif font-bold text-base leading-tight mb-0.5">{book.title}</h3>
                     <p className="text-xs text-ink/60 mb-2">{book.author}</p>
                     <div className="flex gap-2 flex-wrap">
-                      <span className="text-[10px] px-2 py-0.5 bg-parchment-light text-ink/70 rounded border border-ink/10">{book.pace} Tempo</span>
-                      <span className="text-[10px] px-2 py-0.5 bg-parchment-light text-ink/70 rounded border border-ink/10">{book.depth} Derinlik</span>
+                      <span className="text-[10px] px-2 py-0.5 bg-parchment-light text-ink/70 rounded border border-ink/10">{translatePace(book.pace || '')} Tempo</span>
+                      <span className="text-[10px] px-2 py-0.5 bg-parchment-light text-ink/70 rounded border border-ink/10">{translateDepth(book.depth || '')} Derinlik</span>
                       {book.isLegendary && (
                         <span className="text-[10px] px-2 py-0.5 bg-karma/20 text-karma rounded border border-karma/20 font-bold">🔥 Efsanevi</span>
                       )}

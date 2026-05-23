@@ -86,26 +86,26 @@ export const ScriptumFeed: React.FC = () => {
         </div>
 
         {isManualBook && (
-          <div className="flex flex-col sm:flex-row gap-2 mb-3 pl-13">
+          <div className="flex flex-col sm:flex-row gap-2 mb-3 pl-[52px]">
             <input
               type="text"
               value={customBookTitle}
               onChange={(e) => setCustomBookTitle(e.target.value)}
               placeholder="Kitap Adı..."
-              className="flex-1 bg-parchment-light/50 border border-ink/10 rounded-xl px-3 py-1.5 text-xs text-ink outline-none focus:border-karma/50 font-medium"
+              className="flex-1 bg-parchment-light/50 border border-ink/10 rounded-xl px-3 py-2 text-base sm:text-sm text-ink outline-none focus:border-karma/50 font-medium"
             />
             <input
               type="text"
               value={customBookAuthor}
               onChange={(e) => setCustomBookAuthor(e.target.value)}
               placeholder="Yazar..."
-              className="flex-1 bg-parchment-light/50 border border-ink/10 rounded-xl px-3 py-1.5 text-xs text-ink outline-none focus:border-karma/50 font-medium"
+              className="flex-1 bg-parchment-light/50 border border-ink/10 rounded-xl px-3 py-2 text-base sm:text-sm text-ink outline-none focus:border-karma/50 font-medium"
             />
           </div>
         )}
 
-        <div className="flex items-center justify-between pl-13">
-          <div className="relative">
+        <div className="flex flex-wrap items-center justify-end sm:justify-between gap-2 pl-[52px]">
+          <div className="relative flex-1 min-w-0">
             <select
               value={isManualBook ? "manual" : selectedBookId}
               onChange={(e) => {
@@ -117,7 +117,7 @@ export const ScriptumFeed: React.FC = () => {
                   setSelectedBookId(e.target.value);
                 }
               }}
-              className="appearance-none bg-parchment-dark/50 text-ink/70 text-[10px] font-bold px-3 py-1.5 rounded-full outline-none border border-ink/5 pl-7 pr-6 cursor-pointer"
+              className="w-full appearance-none bg-parchment-dark/50 text-ink/70 text-[10px] sm:text-xs font-bold px-3 py-2 rounded-full outline-none border border-ink/5 pl-7 pr-6 cursor-pointer truncate"
             >
               <option value="">(İsteğe bağlı) Kitap Seç</option>
               <option value="manual">✍️ Manuel Kitap Bilgisi Gir</option>
@@ -129,7 +129,7 @@ export const ScriptumFeed: React.FC = () => {
           </div>
           <button
             onClick={handlePost}
-            className="bg-karma text-ink px-4 py-1.5 rounded-full text-xs font-bold hover:bg-karma/90 transition-colors shadow-sm flex items-center gap-1"
+            className="bg-karma text-ink px-4 py-2 sm:py-1.5 rounded-full text-xs font-bold hover:bg-karma/90 transition-colors shadow-sm flex items-center gap-1 flex-shrink-0"
           >
             <Send size={14} /> Paylaş
           </button>

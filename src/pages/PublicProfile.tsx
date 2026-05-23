@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
 import { ChevronLeft, MapPin, Award, BookOpen, Check } from 'lucide-react';
+import { translateCondition } from '../lib/translations';
 
 export const PublicProfile: React.FC = () => {
   const { viewedUser, books, setActiveTab, goBack, requestSwap, requestedSwaps } = useStore();
@@ -107,7 +108,7 @@ export const PublicProfile: React.FC = () => {
                   <p className="text-[10px] text-ink/60 truncate mb-2">{book.author}</p>
                   <div className="mt-auto flex justify-between items-center gap-2">
                     <span className="text-[10px] font-bold text-ink/70 bg-parchment-light px-2 py-1 rounded">
-                      {book.condition}
+                      {translateCondition(book.condition || '')}
                     </span>
                     {requestedSwaps.includes(book.id) ? (
                       <button

@@ -11,7 +11,7 @@ import { getCurrentLocation } from '../lib/location';
 import imageCompression from 'browser-image-compression';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
-
+import { translateCondition } from '../lib/translations';
 export const Profile: React.FC = () => {
   const { user, books, incomingRequests, respondToSwapRequest, deleteBook, updateLocation, setActiveTab, theme, setTheme, requestedSwaps, setViewedUser, openSwapChats, openSwapChatById, setActiveSwapChat } = useStore();
   const [cancelledSwaps, setCancelledSwaps] = React.useState<string[]>([]);
@@ -38,15 +38,25 @@ export const Profile: React.FC = () => {
   }, []);
 
   const handleLogout = async () => {
-    if (!window.confirm('Çıkış yapmak istediğinize emin misiniz?')) return;
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast.error('Çıkış yapılamadı. Tekrar dene.');
-      return;
-    }
-    setActiveSwapChat(null);
-    setActiveTab('dashboard');
-    toast.success('Güvenle çıkış yaptın.');
+    toast((t) => (
+      <div>
+        <p className="text-sm font-medium mb-3">Çıkış yapmak istediğinize emin misiniz?</p>
+        <div className="flex gap-2">
+          <button onClick={async () => {
+            toast.dismiss(t.id);
+            const { error } = await supabase.auth.signOut();
+            if (error) {
+              toast.error('Çıkış yapılamadı. Tekrar dene.');
+              return;
+            }
+            setActiveSwapChat(null);
+            setActiveTab('dashboard');
+            toast.success('Güvenle çıkış yaptın.');
+          }} className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold">Evet, Çıkış Yap</button>
+          <button onClick={() => toast.dismiss(t.id)} className="bg-ink/10 px-3 py-1.5 rounded-lg text-xs font-bold text-ink">İptal</button>
+        </div>
+      </div>
+    ), { duration: Infinity, style: { background: '#fff', color: '#1A202C' } });
   };
 
   const handleUpdateLocation = async () => {
@@ -54,18 +64,27 @@ export const Profile: React.FC = () => {
       setIsUpdatingLocation(true);
       const coords = await getCurrentLocation();
       await updateLocation(coords.lat, coords.lng);
-      alert('Konumunuz başarıyla güncellendi!');
+      toast.success('Konumunuz başarıyla güncellendi!');
     } catch (error) {
-      alert('Konum alınamadı. Lütfen tarayıcı izinlerini kontrol edin.');
+      toast.error('Konum alınamadı. Lütfen tarayıcı izinlerini kontrol edin.');
     } finally {
       setIsUpdatingLocation(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Bu kitabı silmek istediğinize emin misiniz?')) {
-      await deleteBook(id);
-    }
+    toast((t) => (
+      <div>
+        <p className="text-sm font-medium mb-3">Bu kitabı silmek istediğinize emin misiniz?</p>
+        <div className="flex gap-2">
+          <button onClick={async () => {
+            toast.dismiss(t.id);
+            await deleteBook(id);
+          }} className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold">Evet, Sil</button>
+          <button onClick={() => toast.dismiss(t.id)} className="bg-ink/10 px-3 py-1.5 rounded-lg text-xs font-bold text-ink">İptal</button>
+        </div>
+      </div>
+    ), { duration: Infinity, style: { background: '#fff', color: '#1A202C' } });
   };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -440,7 +459,7 @@ export const Profile: React.FC = () => {
                     <span className="text-[10px] text-karma font-bold">Yanıt Bekleniyor</span>
                   </div>
                   <div className="flex items-center gap-2 mt-1.5">
-                    <span className="text-[10px] px-2 py-0.5 bg-parchment-light rounded border border-ink/10 text-ink/60">{book.condition}</span>
+                    <span className="text-[10px] px-2 py-0.5 bg-parchment-light rounded border border-ink/10 text-ink/60">{translateCondition(book.condition || '')}</span>
                     <span className="text-[10px] text-ink/40">{book.distance} km uzakta</span>
                   </div>
                 </div>
@@ -448,10 +467,10 @@ export const Profile: React.FC = () => {
                 {/* Cancel button */}
                 <button
                   onClick={() => setCancelledSwaps(prev => [...prev, book.id])}
-                  className="absolute top-3 right-3 w-6 h-6 rounded-full bg-ink/5 flex items-center justify-center text-ink/30 hover:bg-red-50 hover:text-red-400 transition-colors"
+                  className="absolute top-2 right-2 w-8 h-8 rounded-full bg-ink/5 flex items-center justify-center text-ink/40 hover:bg-red-50 hover:text-red-500 transition-colors"
                   title="İsteği İptal Et"
                 >
-                  <X size={13} />
+                  <X size={18} />
                 </button>
               </motion.div>
             ))}
@@ -479,17 +498,17 @@ export const Profile: React.FC = () => {
                 <div className="relative h-40 mb-3 rounded-xl overflow-hidden bg-parchment-dark group">
                   <img src={book.cover} alt={book.title} className="w-full h-full object-cover opacity-90" />
                   
-                  {/* Edit/Delete Overlay */}
-                  <div className="absolute inset-0 bg-ink/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                  {/* Edit/Delete Buttons Overlay */}
+                  <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                     <button 
                       onClick={() => setEditingBook(book)}
-                      className="w-8 h-8 rounded-full bg-white text-ink flex items-center justify-center hover:scale-110 transition-transform shadow-lg"
+                      className="w-8 h-8 rounded-full bg-white/90 text-ink flex items-center justify-center hover:scale-110 transition-transform shadow-md backdrop-blur-sm"
                     >
                       <Edit2 size={14} />
                     </button>
                     <button 
                       onClick={() => handleDelete(book.id)}
-                      className="w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center hover:scale-110 transition-transform shadow-lg"
+                      className="w-8 h-8 rounded-full bg-red-500/90 text-white flex items-center justify-center hover:scale-110 transition-transform shadow-md backdrop-blur-sm"
                     >
                       <Trash2 size={14} />
                     </button>
@@ -499,7 +518,7 @@ export const Profile: React.FC = () => {
                 <p className="text-xs text-ink/60 truncate mb-2">{book.author}</p>
                 <div className="mt-auto flex justify-between items-center">
                   <span className="text-[10px] px-2 py-1 bg-parchment-light rounded text-ink/70 font-medium">
-                    {book.condition}
+                    {translateCondition(book.condition || '')}
                   </span>
                 </div>
               </div>

@@ -120,23 +120,23 @@ export const Dashboard: React.FC = () => {
                   setTempTotalPages(currentBook.totalPages || ''); 
                   setTempCurrentPage(currentBook.currentPage || ''); 
                 }} 
-                className="text-ink/40 hover:text-ink transition-colors"
+                className="w-10 h-10 flex items-center justify-center text-ink/40 hover:text-ink transition-colors bg-ink/5 rounded-full"
               >
-                <Edit2 size={14} />
+                <Edit2 size={16} />
               </button>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 <button 
                   onClick={handleSaveProgress} 
-                  className="text-green-600 hover:text-green-700 transition-colors p-1"
+                  className="w-10 h-10 flex items-center justify-center text-green-600 hover:text-green-700 bg-green-50 rounded-full transition-colors"
                 >
-                  <Check size={16} />
+                  <Check size={20} />
                 </button>
                 <button 
                   onClick={() => setIsEditingProgress(false)} 
-                  className="text-ink/40 hover:text-ink transition-colors p-1"
+                  className="w-10 h-10 flex items-center justify-center text-red-400 hover:text-red-500 bg-red-50 rounded-full transition-colors"
                 >
-                  <X size={16} />
+                  <X size={20} />
                 </button>
               </div>
             )}
@@ -153,7 +153,7 @@ export const Dashboard: React.FC = () => {
                 value={tempCurrentPage}
                 onChange={(e) => setTempCurrentPage(e.target.value === '' ? '' : parseInt(e.target.value))}
                 placeholder="Örn: 144"
-                className="w-full bg-white border border-ink/10 py-2 px-3 rounded-xl text-ink font-medium text-sm focus:outline-none focus:border-karma transition-all"
+                className="w-full bg-white border border-ink/10 py-2 px-3 rounded-xl text-ink font-medium text-base focus:outline-none focus:border-karma transition-all"
               />
             </div>
             <div className="flex-1">
@@ -164,7 +164,7 @@ export const Dashboard: React.FC = () => {
                 value={tempTotalPages}
                 onChange={(e) => setTempTotalPages(e.target.value === '' ? '' : parseInt(e.target.value))}
                 placeholder="Örn: 320"
-                className="w-full bg-white border border-ink/10 py-2 px-3 rounded-xl text-ink font-medium text-sm focus:outline-none focus:border-karma transition-all"
+                className="w-full bg-white border border-ink/10 py-2 px-3 rounded-xl text-ink font-medium text-base focus:outline-none focus:border-karma transition-all"
               />
             </div>
           </div>

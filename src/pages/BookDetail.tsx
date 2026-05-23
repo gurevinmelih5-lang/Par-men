@@ -4,6 +4,7 @@ import { ChevronLeft, MessageSquareQuote, Layers, Star, Map, Lock, Unlock, Messa
 import toast from 'react-hot-toast';
 import { useStore } from '../store/useStore';
 import { AddScriptumModal } from '../components/AddScriptumModal';
+import { translateCondition, translatePace, translateDepth } from '../lib/translations';
 
 export const BookDetail: React.FC = () => {
   const { books, scriptums, setActiveTab, goBack, user, selectedBookId, likeScriptum } = useStore();
@@ -68,14 +69,14 @@ export const BookDetail: React.FC = () => {
       <header className="absolute top-0 left-0 right-0 p-4 z-20 flex justify-between items-center text-parchment-light">
         <button 
           onClick={() => goBack()}
-          className="p-2 bg-ink/40 backdrop-blur-md rounded-full hover:bg-ink/60 transition-colors"
+          className="w-11 h-11 flex items-center justify-center bg-ink/40 backdrop-blur-md rounded-full hover:bg-ink/60 transition-colors"
         >
           <ChevronLeft size={24} />
         </button>
         <div className="flex items-center gap-2">
           <button
             onClick={() => handleShare(book.title, book.author)}
-            className="p-2 bg-ink/40 backdrop-blur-md rounded-full hover:bg-ink/60 transition-colors"
+            className="w-11 h-11 flex items-center justify-center bg-ink/40 backdrop-blur-md rounded-full hover:bg-ink/60 transition-colors"
           >
             <Share2 size={20} />
           </button>
@@ -105,17 +106,17 @@ export const BookDetail: React.FC = () => {
           <div className="flex gap-4 border-t border-ink/10 pt-4">
             <div className="flex-1">
               <p className="text-[10px] text-ink/40 uppercase tracking-wider font-bold mb-1">Kondisyon</p>
-              <p className="text-sm font-medium">{book.condition}</p>
+              <p className="text-sm font-medium">{translateCondition(book.condition || '')}</p>
             </div>
             <div className="w-px bg-ink/10" />
             <div className="flex-1">
               <p className="text-[10px] text-ink/40 uppercase tracking-wider font-bold mb-1">Tempo</p>
-              <p className="text-sm font-medium">{book.pace}</p>
+              <p className="text-sm font-medium">{translatePace(book.pace || '')}</p>
             </div>
             <div className="w-px bg-ink/10" />
             <div className="flex-1">
               <p className="text-[10px] text-ink/40 uppercase tracking-wider font-bold mb-1">Derinlik</p>
-              <p className="text-sm font-medium">{book.depth}</p>
+              <p className="text-sm font-medium">{translateDepth(book.depth || '')}</p>
             </div>
           </div>
         </div>
@@ -124,9 +125,9 @@ export const BookDetail: React.FC = () => {
           <h2 className="font-serif text-xl font-bold">Kitap Hakkında</h2>
           <p className="text-ink/80 text-sm leading-relaxed font-serif">
             {`"${book.title}", ${book.author} tarafından kaleme alınmış, ${book.genre?.toLowerCase() || 'diğer'} türünde bir eserdir. Parşömen topluluğu içerisinde seyahat eden bu kitap, okuyucuya ${
-              book.pace === 'Slow' ? 'sakin ve derinlemesine' : book.pace === 'Fast' ? 'hızlı ve sürükleyici' : 'dengeli'
+              translatePace(book.pace || '') === 'Yavaş' ? 'sakin ve derinlemesine' : translatePace(book.pace || '') === 'Hızlı' ? 'hızlı ve sürükleyici' : 'dengeli'
             } bir okuma temposu ile ${
-              book.depth === 'High' ? 'yüksek düşünsel' : book.depth === 'Low' ? 'akıcı ve hafif' : 'keyifli bir edebi'
+              translateDepth(book.depth || '') === 'Derin' ? 'yüksek düşünsel' : translateDepth(book.depth || '') === 'Yüzeysel' ? 'akıcı ve hafif' : 'keyifli bir edebi'
             } derinlik sunmaktadır.`}
           </p>
         </div>

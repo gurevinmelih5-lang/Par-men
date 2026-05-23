@@ -11,6 +11,7 @@ import { MapContainer, TileLayer, Marker, Circle, Polyline } from 'react-leaflet
 import L from 'leaflet';
 import { getCityFromCoords, CITIES_COORDS } from '../lib/location';
 import { supabase } from '../lib/supabase';
+import { translateCondition } from '../lib/translations';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -474,10 +475,9 @@ export const Swap: React.FC = () => {
         </div>
         <button 
           onClick={() => setShowScanner(true)}
-          className="bg-karma/20 text-karma p-3 rounded-xl active:bg-karma/30 transition-colors shadow-sm tap-target"
-          title="QR Okut"
+          className="bg-karma/20 text-karma px-4 py-2 rounded-xl active:bg-karma/30 transition-colors shadow-sm flex items-center gap-2 tap-target font-bold text-sm"
         >
-          <ScanLine size={22} />
+          <ScanLine size={18} /> QR Okut
         </button>
       </motion.header>
 
@@ -836,7 +836,7 @@ export const Swap: React.FC = () => {
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
-            className="fixed z-40 p-4 rounded-2xl shadow-xl bg-white border border-purple-100"
+            className="fixed z-40 p-4 rounded-2xl shadow-xl bg-white border border-purple-100 max-h-[55dvh] overflow-y-auto flex flex-col"
             style={{ bottom: 'calc(3.75rem + env(safe-area-inset-bottom, 0px) + 8px)', left: '16px', right: '16px' }}
           >
             <div className="flex flex-col">
@@ -905,7 +905,7 @@ export const Swap: React.FC = () => {
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
-            className={`fixed z-40 flex gap-3 border p-3 rounded-2xl shadow-xl ${activeBook.isLegendary ? 'bg-gradient-to-r from-ink to-ink/90 text-parchment-light border-karma/40' : 'bg-white border-ink/5'}`}
+            className={`fixed z-40 flex gap-3 border p-3 rounded-2xl shadow-xl max-h-[55dvh] overflow-y-auto ${activeBook.isLegendary ? 'bg-gradient-to-r from-ink to-ink/90 text-parchment-light border-karma/40' : 'bg-white border-ink/5'}`}
             style={{ bottom: 'calc(3.75rem + env(safe-area-inset-bottom, 0px) + 8px)', left: '16px', right: '16px' }}
           >
             <div className="w-20 h-28 rounded-lg overflow-hidden bg-parchment-dark flex-shrink-0">
@@ -929,7 +929,7 @@ export const Swap: React.FC = () => {
               <div className="mt-auto flex justify-between items-end">
                 <div>
                   <p className={`text-xs font-bold mb-1 ${activeBook.isLegendary ? 'text-parchment-light/70' : 'text-ink/70'}`}>
-                    {activeBook.isLegendary ? '🗺️ Son görülme: Kadıköy Sahili' : `Kondisyon: ${activeBook.condition}`}
+                    {activeBook.isLegendary ? '🗺️ Son görülme: Kadıköy Sahili' : `Kondisyon: ${translateCondition(activeBook.condition || '')}`}
                   </p>
                   <p className={`text-xs font-bold flex items-center gap-1 ${activeBook.isLegendary ? 'text-karma' : 'text-karma'}`}>
                     <MapPin size={12} /> Kadıköy İskele (Güvenli Nokta)

@@ -191,7 +191,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess }) => {
                   setError(null);
                   setInfo(null);
                 }}
-                className="text-[11px] font-bold text-karma hover:text-ink transition-colors"
+                className="text-[11px] font-bold text-karma hover:text-ink transition-colors py-2 px-1"
               >
                 Şifremi unuttum
               </button>
