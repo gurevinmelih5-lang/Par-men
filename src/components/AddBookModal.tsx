@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Book, Upload, Search } from 'lucide-react';
+import { X, BookOpen, Upload, Search, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { supabase } from '../lib/supabase';
 import imageCompression from 'browser-image-compression';
@@ -20,14 +20,31 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
     author: '',
     cover: '',
     genre: '',
-    condition: 'Good' as any,
-    pace: 'Medium' as any,
-    depth: 'Medium' as any,
+    condition: 'İyi' as any,
+    pace: 'Orta' as any,
+    depth: 'Orta' as any,
     timeCapsule: ''
   });
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
+  // Tracks whether user manually uploaded an image (not via Google Books)
+  const [isManualUpload, setIsManualUpload] = useState(false);
+  // Confirmation that the uploaded image matches the book title
+  const [coverConfirmed, setCoverConfirmed] = useState(false);
+
+  const resetForm = () => {
+    setFormData({ title: '', author: '', cover: '', genre: '', condition: 'İyi', pace: 'Orta', depth: 'Orta', timeCapsule: '' });
+    setFile(null);
+    setPreview(null);
+    setIsManualUpload(false);
+    setCoverConfirmed(false);
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
 
   const searchGoogleBooks = async () => {
     if (!formData.title) return;
@@ -43,10 +60,18 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
           setFormData(prev => ({ ...prev, cover: secureCover, author: author || prev.author }));
           setPreview(secureCover);
           setFile(null);
+          setIsManualUpload(false);
+          setCoverConfirmed(true); // Google Books result is always "confirmed"
+          toast.success('Kapak ve yazar bilgisi bulundu!');
+        } else {
+          toast.error('Bu kitap için kapak görseli bulunamadı.');
         }
+      } else {
+        toast.error('Kitap bulunamadı. Kitap adını kontrol edin.');
       }
     } catch (error) {
-      console.error('Google Books API error', error);
+      console.error('Google Kitaplar API hatası', error);
+      toast.error('Arama sırasında bir hata oluştu.');
     } finally {
       setIsSearching(false);
     }
@@ -54,11 +79,17 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
 
   // Compress & preview image before upload
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!formData.title.trim()) {
+      toast.error('Lütfen önce kitap adını girin!');
+      e.target.value = '';
+      return;
+    }
+
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
 
       // Revoke previous preview URL to free memory
-      if (preview) URL.revokeObjectURL(preview);
+      if (preview && preview.startsWith('blob:')) URL.revokeObjectURL(preview);
 
       try {
         const options = {
@@ -67,20 +98,22 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
           useWebWorker: true,
           initialQuality: 0.8
         };
-        
+
         const compressedFile = await imageCompression(selectedFile, options);
 
         // Moderation check
         const isSafe = await moderateImage(compressedFile);
         if (!isSafe) {
-          toast.error('Görsel uygunsuz içerik içeriyor. Cinsel, hakaret içeren veya siyasi görseller eklenemez.');
+          toast.error('Görsel uygunsuz içerik içeriyor. Lütfen uygun bir kapak görseli seçin.');
           return;
         }
 
         setFile(compressedFile);
         setPreview(URL.createObjectURL(compressedFile));
+        setIsManualUpload(true);
+        setCoverConfirmed(false); // Reset confirmation when new file selected
       } catch (error) {
-        console.error('Error compressing image:', error);
+        console.error('Görsel sıkıştırma hatası:', error);
         // Fallback to original
         const isSafe = await moderateImage(selectedFile);
         if (!isSafe) {
@@ -89,12 +122,27 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
         }
         setFile(selectedFile);
         setPreview(URL.createObjectURL(selectedFile));
+        setIsManualUpload(true);
+        setCoverConfirmed(false);
       }
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate: if there's a manual upload, user must confirm it matches the title
+    if (isManualUpload && !coverConfirmed) {
+      toast.error('Lütfen yüklediğiniz görselin kitap kapağıyla eşleştiğini onaylayın.');
+      return;
+    }
+
+    // If no cover provided at all, warn but allow
+    if (!formData.cover && !file) {
+      toast.error('Lütfen bir kapak görseli ekleyin (arama butonunu veya yükleme alanını kullanın).');
+      return;
+    }
+
     setLoading(true);
 
     let finalCoverUrl = formData.cover;
@@ -107,7 +155,7 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
         .upload(fileName, file);
 
       if (error) {
-        console.error('Error uploading image:', error);
+        console.error('Görsel yükleme hatası:', error);
       } else if (data) {
         const { data: { publicUrl } } = supabase.storage
           .from('book-covers')
@@ -116,170 +164,237 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
       }
     }
 
-    await addBook({ 
-      ...formData, 
-      cover: finalCoverUrl, 
-      timeCapsule: formData.timeCapsule ? { message: formData.timeCapsule, from: '' } : undefined 
+    await addBook({
+      ...formData,
+      cover: finalCoverUrl,
+      timeCapsule: formData.timeCapsule ? { message: formData.timeCapsule, from: '' } : undefined
     });
     setLoading(false);
-    onClose();
+    handleClose();
   };
 
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 bg-ink/70 flex items-end justify-center"
-          onClick={onClose}
+          onClick={handleClose}
         >
-          <motion.div 
+          <motion.div
             initial={{ y: '100%', opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: '100%', opacity: 0 }}
-            transition={{ type: 'tween', duration: 0.25, ease: 'easeOut' }}
-            className="bg-parchment-light w-full max-w-sm rounded-t-3xl p-5 shadow-2xl overflow-y-auto scroll-touch"
-            style={{ maxHeight: '92dvh', paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}
+            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+            className="bg-parchment-light w-full max-w-md rounded-t-3xl shadow-2xl overflow-y-auto"
+            style={{ maxHeight: '94dvh', paddingBottom: 'max(env(safe-area-inset-bottom), 20px)' }}
             onClick={e => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-serif text-ink flex items-center gap-2">
-                <Book className="text-karma" /> Kitap Ekle
-              </h2>
-              <button onClick={onClose} className="text-ink/40 hover:text-ink transition-colors">
-                <X size={24} />
-              </button>
+            {/* Drag indicator */}
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 bg-ink/20 rounded-full" />
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1">Kitap Adı</label>
-                <div className="flex gap-2">
-                  <input 
-                    required 
-                    value={formData.title}
-                    onChange={e => setFormData({...formData, title: e.target.value})}
-                    className="flex-1 bg-white border border-ink/10 py-3 px-4 rounded-xl text-ink font-medium focus:outline-none focus:border-karma transition-all" 
-                    placeholder="Örn: Körlük" 
-                  />
-                  <button 
-                    type="button"
-                    onClick={searchGoogleBooks}
-                    disabled={isSearching || !formData.title}
-                    className="bg-ink text-parchment-light px-4 rounded-xl flex items-center justify-center disabled:opacity-50"
-                    title="Otomatik Kapak ve Yazar Bul"
-                  >
-                    {isSearching ? <div className="w-5 h-5 border-2 border-parchment-light border-t-transparent rounded-full animate-spin" /> : <Search size={20} />}
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1">Yazar</label>
-                <input 
-                  required 
-                  value={formData.author}
-                  onChange={e => setFormData({...formData, author: e.target.value})}
-                  className="w-full bg-white border border-ink/10 py-3 px-4 rounded-xl text-ink font-medium focus:outline-none focus:border-karma transition-all" 
-                  placeholder="Örn: José Saramago" 
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1">Tür</label>
-                <select 
-                  required
-                  value={formData.genre}
-                  onChange={e => setFormData({...formData, genre: e.target.value})}
-                  className="w-full bg-white border border-ink/10 py-3 px-4 rounded-xl text-ink font-medium focus:outline-none focus:border-karma transition-all"
+            <div className="px-5 pb-2">
+              <div className="flex justify-between items-center mb-5">
+                <h2 className="text-xl font-serif text-ink flex items-center gap-2">
+                  <BookOpen className="text-karma" size={22} /> Kitap Ekle
+                </h2>
+                <button
+                  onClick={handleClose}
+                  className="w-10 h-10 flex items-center justify-center rounded-full bg-ink/5 text-ink/50 active:bg-ink/10 transition-colors"
                 >
-                  <option value="" disabled>Tür Seçin (Zorunlu)</option>
-                  <option value="Roman">Roman</option>
-                  <option value="Bilim Kurgu">Bilim Kurgu</option>
-                  <option value="Tarih">Tarih</option>
-                  <option value="Felsefe">Felsefe</option>
-                  <option value="Psikoloji">Psikoloji</option>
-                  <option value="Şiir">Şiir</option>
-                  <option value="Biyografi">Biyografi</option>
-                  <option value="Sanat">Sanat</option>
-                  <option value="Kişisel Gelişim">Kişisel Gelişim</option>
-                  <option value="Polisiye">Polisiye</option>
-                  <option value="Diğer">Diğer</option>
-                </select>
+                  <X size={20} />
+                </button>
               </div>
-              <div>
-                <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1">Kapak Görseli</label>
-                <div className="relative border-2 border-dashed border-ink/20 rounded-xl p-4 text-center hover:bg-white/50 transition-colors">
-                  <input 
-                    type="file" 
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+
+                {/* Kitap Adı + Arama */}
+                <div>
+                  <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">Kitap Adı *</label>
+                  <div className="flex gap-2">
+                    <input
+                      required
+                      value={formData.title}
+                      onChange={e => setFormData({ ...formData, title: e.target.value })}
+                      className="flex-1 bg-white border border-ink/10 py-3 px-4 rounded-xl text-ink font-medium focus:outline-none focus:border-karma transition-all"
+                      placeholder="Örn: Körlük"
+                    />
+                    <button
+                      type="button"
+                      onClick={searchGoogleBooks}
+                      disabled={isSearching || !formData.title.trim()}
+                      className="min-w-[52px] h-[50px] bg-ink text-parchment-light rounded-xl flex items-center justify-center disabled:opacity-40 active:bg-ink/80 transition-colors"
+                      title="Otomatik Kapak ve Yazar Bul"
+                    >
+                      {isSearching
+                        ? <div className="w-5 h-5 border-2 border-parchment-light border-t-transparent rounded-full animate-spin" />
+                        : <Search size={20} />}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-ink/40 mt-1">🔍 Arama butonuyla kapak ve yazar otomatik doldurulur</p>
+                </div>
+
+                {/* Yazar */}
+                <div>
+                  <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">Yazar *</label>
+                  <input
+                    required
+                    value={formData.author}
+                    onChange={e => setFormData({ ...formData, author: e.target.value })}
+                    className="w-full bg-white border border-ink/10 py-3 px-4 rounded-xl text-ink font-medium focus:outline-none focus:border-karma transition-all"
+                    placeholder="Örn: José Saramago"
                   />
-                  {preview ? (
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="w-20 h-28 rounded shadow-md overflow-hidden">
-                        <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+                </div>
+
+                {/* Tür */}
+                <div>
+                  <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">Tür *</label>
+                  <select
+                    required
+                    value={formData.genre}
+                    onChange={e => setFormData({ ...formData, genre: e.target.value })}
+                    className="w-full bg-white border border-ink/10 py-3 px-4 rounded-xl text-ink font-medium focus:outline-none focus:border-karma transition-all"
+                  >
+                    <option value="" disabled>Tür Seçin (Zorunlu)</option>
+                    <option value="Roman">Roman</option>
+                    <option value="Bilim Kurgu">Bilim Kurgu</option>
+                    <option value="Tarih">Tarih</option>
+                    <option value="Felsefe">Felsefe</option>
+                    <option value="Psikoloji">Psikoloji</option>
+                    <option value="Şiir">Şiir</option>
+                    <option value="Biyografi">Biyografi</option>
+                    <option value="Sanat">Sanat</option>
+                    <option value="Kişisel Gelişim">Kişisel Gelişim</option>
+                    <option value="Polisiye">Polisiye</option>
+                    <option value="Diğer">Diğer</option>
+                  </select>
+                </div>
+
+                {/* Kapak Görseli */}
+                <div>
+                  <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">Kapak Görseli *</label>
+                  <div className="relative border-2 border-dashed border-ink/20 rounded-xl p-4 text-center active:bg-white/50 transition-colors">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    />
+                    {preview ? (
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-22 rounded-lg shadow-md overflow-hidden flex-shrink-0 border border-ink/10" style={{ height: '88px' }}>
+                          <img src={preview} alt="Kapak Önizleme" className="w-full h-full object-cover" />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-bold text-ink">{formData.title || 'Kitap Kapağı'}</p>
+                          <p className="text-xs text-ink/50 mt-0.5">Değiştirmek için dokun</p>
+                          {isManualUpload && (
+                            <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1">
+                              <AlertCircle size={10} /> Manuel yükleme
+                            </p>
+                          )}
+                          {!isManualUpload && (
+                            <p className="text-[10px] text-green-600 mt-1 flex items-center gap-1">
+                              <CheckCircle2 size={10} /> Kitap veritabanından
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <span className="text-xs font-medium text-ink/60">Görseli Değiştir</span>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-2 text-ink/40">
-                      <Upload size={24} />
-                      <span className="text-sm font-medium">Cihazdan Görsel Seç</span>
-                    </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 text-ink/40 py-2">
+                        <Upload size={28} />
+                        <span className="text-sm font-medium">Cihazdan Görsel Seç</span>
+                        <span className="text-[10px]">veya yukarıdan otomatik ara</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Onay kutusu — sadece manuel yükleme yapıldığında */}
+                  {isManualUpload && preview && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-xl"
+                    >
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <div className="relative mt-0.5">
+                          <input
+                            type="checkbox"
+                            checked={coverConfirmed}
+                            onChange={e => setCoverConfirmed(e.target.checked)}
+                            className="sr-only"
+                          />
+                          <div
+                            className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                              coverConfirmed ? 'bg-green-500 border-green-500' : 'bg-white border-amber-400'
+                            }`}
+                          >
+                            {coverConfirmed && <CheckCircle2 size={12} className="text-white" />}
+                          </div>
+                        </div>
+                        <span className="text-xs text-amber-800 font-medium leading-relaxed">
+                          Yüklediğim görsel <strong>"{formData.title || 'bu kitabın'}"</strong> kapağıdır ve kitap adıyla eşleşmektedir.
+                        </span>
+                      </label>
+                    </motion.div>
                   )}
                 </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1">Kondisyon</label>
-                  <select 
-                    value={formData.condition}
-                    onChange={e => setFormData({...formData, condition: e.target.value})}
-                    className="w-full bg-white border border-ink/10 py-3 px-4 rounded-xl text-ink font-medium focus:outline-none focus:border-karma transition-all"
-                  >
-                    <option value="Mint">Mint (Mükemmel)</option>
-                    <option value="Good">İyi</option>
-                    <option value="Fair">Orta</option>
-                    <option value="Poor">Yıpranmış</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1">Tempo</label>
-                  <select 
-                    value={formData.pace}
-                    onChange={e => setFormData({...formData, pace: e.target.value})}
-                    className="w-full bg-white border border-ink/10 py-3 px-4 rounded-xl text-ink font-medium focus:outline-none focus:border-karma transition-all"
-                  >
-                    <option value="Slow">Yavaş</option>
-                    <option value="Medium">Orta</option>
-                    <option value="Fast">Hızlı</option>
-                  </select>
-                </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1 flex items-center gap-1">
-                  Zaman Kapsülü <span className="text-karma font-normal normal-case">(İsteğe Bağlı)</span>
-                </label>
-                <textarea 
-                  value={formData.timeCapsule}
-                  onChange={e => setFormData({...formData, timeCapsule: e.target.value})}
-                  className="w-full bg-white border border-ink/10 py-3 px-4 rounded-xl text-ink font-medium focus:outline-none focus:border-karma transition-all resize-none h-20" 
-                  placeholder="Bu kitabı alan kişiye gizli bir not bırakın..." 
-                />
-              </div>
+                {/* Kondisyon & Tempo */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">Durum</label>
+                    <select
+                      value={formData.condition}
+                      onChange={e => setFormData({ ...formData, condition: e.target.value })}
+                      className="w-full bg-white border border-ink/10 py-3 px-3 rounded-xl text-ink font-medium focus:outline-none focus:border-karma transition-all text-sm"
+                    >
+                      <option value="Mükemmel">Mükemmel</option>
+                      <option value="İyi">İyi</option>
+                      <option value="Orta">Orta</option>
+                      <option value="Yıpranmış">Yıpranmış</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">Tempo</label>
+                    <select
+                      value={formData.pace}
+                      onChange={e => setFormData({ ...formData, pace: e.target.value })}
+                      className="w-full bg-white border border-ink/10 py-3 px-3 rounded-xl text-ink font-medium focus:outline-none focus:border-karma transition-all text-sm"
+                    >
+                      <option value="Yavaş">Yavaş</option>
+                      <option value="Orta">Orta</option>
+                      <option value="Hızlı">Hızlı</option>
+                    </select>
+                  </div>
+                </div>
 
-              <button 
-                type="submit" 
-                disabled={loading}
-                className="w-full mt-2 bg-ink text-parchment-light py-4 rounded-xl font-bold shadow-lg shadow-ink/20 hover:bg-ink/90 transition-all active:scale-[0.98]"
-              >
-                {loading ? 'Ekleniyor...' : 'Kütüphaneye Ekle'}
-              </button>
-            </form>
+                {/* Zaman Kapsülü */}
+                <div>
+                  <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                    Zaman Kapsülü <span className="text-karma font-normal normal-case">(İsteğe Bağlı)</span>
+                  </label>
+                  <textarea
+                    value={formData.timeCapsule}
+                    onChange={e => setFormData({ ...formData, timeCapsule: e.target.value })}
+                    className="w-full bg-white border border-ink/10 py-3 px-4 rounded-xl text-ink font-medium focus:outline-none focus:border-karma transition-all resize-none h-20"
+                    placeholder="Bu kitabı alan kişiye gizli bir not bırakın..."
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading || (isManualUpload && !coverConfirmed)}
+                  className="w-full mt-1 bg-ink text-parchment-light py-4 rounded-xl font-bold shadow-lg shadow-ink/20 active:bg-ink/80 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Ekleniyor...' : 'Kütüphaneye Ekle'}
+                </button>
+              </form>
+            </div>
           </motion.div>
         </motion.div>
       )}

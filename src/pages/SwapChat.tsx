@@ -41,6 +41,7 @@ export const SwapChat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const swapId = activeSwapChat?.swapId;
   const chatEnded = Boolean(activeSwapChat?.chatEndedBy);
@@ -132,12 +133,15 @@ export const SwapChat: React.FC = () => {
 
   if (!activeSwapChat) {
     return (
-      <div className="min-h-screen bg-parchment-light flex items-center justify-center p-6 text-center">
+      <div className="min-h-[100dvh] bg-parchment-light flex items-center justify-center p-6 text-center pb-24">
         <div>
           <BookOpen size={40} className="mx-auto text-ink/20 mb-4" />
           <p className="font-serif text-lg text-ink/60">Aktif bir takas sohbeti bulunamadı.</p>
-          <button onClick={() => setActiveTab('profile')} className="mt-4 text-sm font-bold text-karma underline">
-            Profile Dön
+          <button
+            onClick={() => setActiveTab('profile')}
+            className="mt-4 text-sm font-bold text-karma underline min-h-[44px] px-4"
+          >
+            Profilime Dön
           </button>
         </div>
       </div>
@@ -147,7 +151,7 @@ export const SwapChat: React.FC = () => {
   const handleSend = async () => {
     if (!input.trim() || !swapId || chatEnded) return;
     const text = input.trim();
-    
+
     if (containsProfanity(text)) {
       toast.error('Mesajınız uygunsuz kelimeler içeriyor. Lütfen düzelterek tekrar deneyin.');
       return;
@@ -197,15 +201,25 @@ export const SwapChat: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-[100dvh] bg-parchment-light">
-      <header className="flex items-center gap-2 p-3 border-b border-ink/10 bg-white shadow-sm z-10 flex-shrink-0">
+    /*
+      SwapChat tam ekran kaplıyor ve Layout içinde BottomNav yok (activeTab=chat).
+      Bu nedenle input barı en alta sabitlenmiş, mesajlar onun üzerinde scroll yapıyor.
+    */
+    <div
+      className="flex flex-col bg-parchment-light"
+      style={{ height: '100dvh' }}
+    >
+      {/* ─── Üst Bar ─── */}
+      <header className="flex items-center gap-2 px-2 py-2 border-b border-ink/10 bg-white shadow-sm z-10 flex-shrink-0"
+        style={{ paddingTop: 'max(env(safe-area-inset-top), 8px)' }}
+      >
         <button
           type="button"
           onClick={() => goBack()}
-          className="p-2 rounded-full hover:bg-parchment-light transition-colors text-ink/60"
+          className="w-11 h-11 flex items-center justify-center rounded-full text-ink/60 active:bg-parchment-light transition-colors flex-shrink-0"
           aria-label="Geri"
         >
-          <ChevronLeft size={22} />
+          <ChevronLeft size={24} />
         </button>
 
         <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-karma/40 flex-shrink-0">
@@ -234,10 +248,10 @@ export const SwapChat: React.FC = () => {
                 if (swapId) await useStore.getState().endSwapChat(swapId);
               }
             }}
-            className="p-2 rounded-full text-green-600/90 hover:bg-green-50 transition-colors flex-shrink-0"
+            className="w-11 h-11 flex items-center justify-center rounded-full text-green-600 active:bg-green-50 transition-colors flex-shrink-0"
             title="Takası Tamamla"
           >
-            <CheckCheck size={20} />
+            <CheckCheck size={22} />
           </button>
         )}
 
@@ -245,14 +259,15 @@ export const SwapChat: React.FC = () => {
           type="button"
           onClick={handleEndChat}
           disabled={chatEnded}
-          className="p-2 rounded-full text-red-600/90 hover:bg-red-50 disabled:opacity-30 transition-colors flex-shrink-0"
-          title="Sohbeti sonlandır"
+          className="w-11 h-11 flex items-center justify-center rounded-full text-red-500 active:bg-red-50 disabled:opacity-30 transition-colors flex-shrink-0"
+          title="Sohbeti Sonlandır"
           aria-label="Sohbeti sonlandır"
         >
-          <Ban size={20} />
+          <Ban size={22} />
         </button>
       </header>
 
+      {/* ─── Durum Bantları ─── */}
       <div className="bg-green-50 border-b border-green-200 px-4 py-2 flex-shrink-0">
         <span className="text-green-700 text-xs font-bold">✓ Takas onaylandı</span>
         <span className="text-[10px] text-green-600 ml-2">— Buluşma için yalnızca karşı tarafınızla yazışın</span>
@@ -266,7 +281,8 @@ export const SwapChat: React.FC = () => {
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-0">
+      {/* ─── Mesajlar (scroll alanı) ─── */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-0 overscroll-contain">
         {messages.length === 0 && !chatEnded && (
           <p className="text-center text-xs text-ink/45 py-8">Henüz mesaj yok. Buluşma yeri ve saati için yazın.</p>
         )}
@@ -305,25 +321,31 @@ export const SwapChat: React.FC = () => {
         <div ref={bottomRef} />
       </div>
 
-      <div className="p-4 border-t border-ink/10 bg-white flex-shrink-0 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
-        <div className="flex items-center gap-3 bg-parchment-light rounded-2xl px-4 py-2 border border-ink/10">
+      {/* ─── Mesaj Yazma Alanı ─── */}
+      <div
+        className="border-t border-ink/10 bg-white flex-shrink-0 px-3 py-2"
+        style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}
+      >
+        <div className="flex items-center gap-2 bg-parchment-light rounded-2xl pl-4 pr-2 py-1.5 border border-ink/10">
           <input
+            ref={inputRef}
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             placeholder={chatEnded ? 'Sohbet kapalı' : 'Mesaj yaz...'}
             disabled={chatEnded}
-            className="flex-1 bg-transparent outline-none text-sm text-ink placeholder:text-ink/30 font-medium disabled:opacity-50"
+            className="flex-1 bg-transparent outline-none text-sm text-ink placeholder:text-ink/30 font-medium disabled:opacity-50 min-h-[36px]"
+            style={{ fontSize: '16px' }}
           />
           <button
             type="button"
             onClick={handleSend}
             disabled={!input.trim() || chatEnded}
-            className="w-9 h-9 rounded-xl bg-ink text-parchment-light flex items-center justify-center disabled:opacity-30 transition-all active:scale-95 shadow-sm"
+            className="w-10 h-10 rounded-xl bg-ink text-parchment-light flex items-center justify-center disabled:opacity-30 transition-all active:scale-95 shadow-sm flex-shrink-0"
             aria-label="Gönder"
           >
-            <Send size={16} />
+            <Send size={18} />
           </button>
         </div>
       </div>

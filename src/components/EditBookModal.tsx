@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Book, Upload } from 'lucide-react';
+import { X, BookOpen, Upload } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { supabase } from '../lib/supabase';
 import type { Book as BookType } from '../types/models';
@@ -20,9 +20,9 @@ export const EditBookModal: React.FC<EditBookModalProps> = ({ isOpen, onClose, b
     author: '',
     cover: '',
     genre: '',
-    condition: 'Good' as any,
-    pace: 'Medium' as any,
-    depth: 'Medium' as any
+    condition: 'İyi' as any,
+    pace: 'Orta' as any,
+    depth: 'Orta' as any
   });
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -110,16 +110,20 @@ export const EditBookModal: React.FC<EditBookModalProps> = ({ isOpen, onClose, b
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-            className="bg-parchment-light w-full max-w-sm rounded-t-3xl p-5 shadow-2xl overflow-y-auto scroll-touch"
-            style={{ maxHeight: '92dvh', paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}
+            className="bg-parchment-light w-full max-w-md rounded-t-3xl shadow-2xl overflow-y-auto scroll-touch"
+            style={{ maxHeight: '94dvh', paddingBottom: 'max(env(safe-area-inset-bottom), 20px)' }}
             onClick={e => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-serif text-ink flex items-center gap-2">
-                <Book className="text-karma" /> Kitabı Düzenle
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 bg-ink/20 rounded-full" />
+            </div>
+            <div className="px-5 pb-2">
+            <div className="flex justify-between items-center mb-5">
+              <h2 className="text-xl font-serif text-ink flex items-center gap-2">
+                <BookOpen className="text-karma" size={22} /> Kitabı Düzenle
               </h2>
-              <button onClick={onClose} className="text-ink/40 hover:text-ink transition-colors">
-                <X size={24} />
+              <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-full bg-ink/5 text-ink/50 active:bg-ink/10 transition-colors">
+                <X size={20} />
               </button>
             </div>
 
@@ -191,30 +195,30 @@ export const EditBookModal: React.FC<EditBookModalProps> = ({ isOpen, onClose, b
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1">Kondisyon</label>
+                  <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">Durum</label>
                   <select 
                     value={formData.condition}
                     onChange={e => setFormData({...formData, condition: e.target.value})}
-                    className="w-full bg-white border border-ink/10 py-3 px-4 rounded-xl text-ink font-medium focus:outline-none focus:border-karma transition-all"
+                    className="w-full bg-white border border-ink/10 py-3 px-3 rounded-xl text-ink font-medium focus:outline-none focus:border-karma transition-all text-sm"
                   >
-                    <option value="Mint">Mint (Mükemmel)</option>
-                    <option value="Good">İyi</option>
-                    <option value="Fair">Orta</option>
-                    <option value="Poor">Yıpranmış</option>
+                    <option value="Mükemmel">Mükemmel</option>
+                    <option value="İyi">İyi</option>
+                    <option value="Orta">Orta</option>
+                    <option value="Yıpranmış">Yıpranmış</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1">Tempo</label>
+                  <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">Tempo</label>
                   <select 
                     value={formData.pace}
                     onChange={e => setFormData({...formData, pace: e.target.value})}
-                    className="w-full bg-white border border-ink/10 py-3 px-4 rounded-xl text-ink font-medium focus:outline-none focus:border-karma transition-all"
+                    className="w-full bg-white border border-ink/10 py-3 px-3 rounded-xl text-ink font-medium focus:outline-none focus:border-karma transition-all text-sm"
                   >
-                    <option value="Slow">Yavaş</option>
-                    <option value="Medium">Orta</option>
-                    <option value="Fast">Hızlı</option>
+                    <option value="Yavaş">Yavaş</option>
+                    <option value="Orta">Orta</option>
+                    <option value="Hızlı">Hızlı</option>
                   </select>
                 </div>
               </div>
@@ -222,11 +226,12 @@ export const EditBookModal: React.FC<EditBookModalProps> = ({ isOpen, onClose, b
               <button 
                 type="submit" 
                 disabled={loading}
-                className="w-full mt-2 bg-ink text-parchment-light py-4 rounded-xl font-bold shadow-lg shadow-ink/20 hover:bg-ink/90 transition-all active:scale-[0.98]"
+                className="w-full mt-1 bg-ink text-parchment-light py-4 rounded-xl font-bold shadow-lg shadow-ink/20 active:bg-ink/80 transition-all active:scale-[0.98] disabled:opacity-50"
               >
                 {loading ? 'Güncelleniyor...' : 'Değişiklikleri Kaydet'}
               </button>
             </form>
+            </div>
           </motion.div>
         </motion.div>
       )}

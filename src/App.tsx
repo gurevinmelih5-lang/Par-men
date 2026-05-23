@@ -124,11 +124,13 @@ function App() {
       case 'profile': return <Profile />;
       case 'bookDetail': return <BookDetail />;
       case 'publicProfile': return <PublicProfile />;
-      case 'chat': return <SwapChat />;
       case 'scriptumFeed': return <ScriptumFeed />;
       default: return <Dashboard />;
     }
   };
+
+  // SwapChat is full-screen and manages its own layout (no BottomNav needed)
+  const isFullScreenTab = activeTab === 'chat';
 
   if (loading) {
     return (
@@ -160,19 +162,39 @@ function App() {
     <ThemeProvider>
       {toaster}
       {showOnboarding && <Onboarding onComplete={completeOnboarding} />}
-      <Layout>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18, ease: 'easeInOut' }}
-          >
-            {renderContent()}
-          </motion.div>
-        </AnimatePresence>
-      </Layout>
+      {isFullScreenTab ? (
+        // Full-screen pages rendered WITHOUT Layout (no BottomNav)
+        <div className="flex justify-center bg-[#F5F0E6] min-h-[100dvh]">
+          <div className="w-full max-w-md bg-parchment-light relative shadow-2xl overflow-x-hidden" style={{ height: '100dvh' }}>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15, ease: 'easeInOut' }}
+                className="h-full"
+              >
+                <SwapChat />
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </div>
+      ) : (
+        <Layout>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18, ease: 'easeInOut' }}
+            >
+              {renderContent()}
+            </motion.div>
+          </AnimatePresence>
+        </Layout>
+      )}
     </ThemeProvider>
   );
 }

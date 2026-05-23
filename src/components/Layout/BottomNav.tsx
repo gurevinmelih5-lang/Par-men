@@ -17,7 +17,7 @@ export const BottomNav: React.FC = () => {
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 bg-parchment-light border-t border-ink/10 z-50 no-select"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0px)' }}
     >
       <div className="max-w-md mx-auto flex justify-around items-stretch" style={{ minHeight: '56px' }}>
         {tabs.map((tab) => {

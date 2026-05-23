@@ -72,7 +72,7 @@ export const SwapTableModal: React.FC<SwapTableModalProps> = ({ isOpen, onClose,
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-ink/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-6"
+        className="fixed inset-0 bg-ink/60 backdrop-blur-sm z-[100] flex items-end sm:items-center justify-center sm:p-6"
         onClick={onClose}
       >
         <motion.div
@@ -81,7 +81,7 @@ export const SwapTableModal: React.FC<SwapTableModalProps> = ({ isOpen, onClose,
           exit={{ y: '100%' }}
           transition={{ type: "spring", damping: 25, stiffness: 200 }}
           className="bg-parchment-light w-full max-w-lg sm:rounded-3xl rounded-t-3xl flex flex-col shadow-2xl overflow-hidden"
-          style={{ maxHeight: '92dvh', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+          style={{ maxHeight: '90dvh' }}
           onClick={e => e.stopPropagation()}
         >
           {/* Header */}
@@ -169,18 +169,23 @@ export const SwapTableModal: React.FC<SwapTableModalProps> = ({ isOpen, onClose,
              </p>
           </div>
 
-          {/* Action Area */}
-          <div className="p-4 bg-white border-t border-ink/5 flex gap-3">
+          {/* Buton Alanı */}
+          <div
+            className="p-4 bg-white border-t border-ink/5 flex gap-3"
+            style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}
+          >
             <button 
               onClick={handleReject}
-              className="flex-1 bg-red-50 text-red-600 py-3 rounded-xl font-bold hover:bg-red-100 transition-colors"
+              className="flex-1 bg-red-50 text-red-600 py-3.5 rounded-xl font-bold active:bg-red-100 transition-colors min-h-[52px]"
             >
               Reddet
             </button>
             <button 
               onClick={handleConfirm}
               disabled={!offeredBookId}
-              className={`flex-[2] py-3 rounded-xl font-bold transition-all shadow-md active:scale-[0.98] flex justify-center items-center gap-2 ${offeredBookId ? 'bg-karma text-ink shadow-karma/30 active:bg-karma/90' : 'bg-ink/10 text-ink/40 cursor-not-allowed'}`}
+              className={`flex-[2] py-3.5 rounded-xl font-bold transition-all shadow-md active:scale-[0.98] flex justify-center items-center gap-2 min-h-[52px] ${
+                offeredBookId ? 'bg-karma text-ink shadow-karma/30 active:bg-karma/90' : 'bg-ink/10 text-ink/40 cursor-not-allowed'
+              }`}
             >
               <Check size={18} /> Takası Onayla
             </button>

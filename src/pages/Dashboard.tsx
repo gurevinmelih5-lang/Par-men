@@ -263,7 +263,7 @@ export const Dashboard: React.FC = () => {
           <div className="absolute top-0 right-4 opacity-5 font-serif text-9xl leading-none select-none">"</div>
           <h2 className="font-serif text-lg mb-4 text-karma flex items-center gap-2">
             <Clock size={18} />
-            Günün Scriptum'u
+            Günün Yazısı
           </h2>
           <p className="font-serif text-lg italic leading-relaxed relative z-10 text-parchment-light/90">
             "{dailyScriptum.content}"

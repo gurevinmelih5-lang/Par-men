@@ -22,7 +22,7 @@ export const InboxModal: React.FC<InboxModalProps> = ({ isOpen, onClose }) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-ink/60 backdrop-blur-sm z-[80] flex items-end justify-center"
+        className="fixed inset-0 bg-ink/60 backdrop-blur-sm z-[100] flex items-end justify-center"
         onClick={onClose}
       >
         <motion.div
