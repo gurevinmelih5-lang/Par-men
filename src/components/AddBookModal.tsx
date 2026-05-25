@@ -134,13 +134,19 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
              setCoverConfirmed(true);
              toast.success('Kapak metni onaylandı!', { id: 'ocr-toast' });
           } else {
+             setFile(null);
+             setPreview(null);
+             setIsManualUpload(false);
              setCoverConfirmed(false);
-             setOcrError('Görselde kitap adı bulunamadı. Lütfen kapağı daha net çeken bir fotoğraf yükleyin veya doğruluğundan eminseniz alttaki kutucuğu işaretleyin.');
-             toast.error('Kitap adı görselle eşleşmedi!', { id: 'ocr-toast' });
+             toast.error('Kitap adı görselle eşleşmedi! Lütfen kitabın kapağını net bir şekilde çekerek tekrar yükleyin.', { id: 'ocr-toast' });
           }
         } catch (ocrErr) {
           console.error('OCR Hatası:', ocrErr);
-          setOcrError('Görsel analiz edilemedi. Kapağın doğruluğundan eminseniz manuel onaylayın.');
+          setFile(null);
+          setPreview(null);
+          setIsManualUpload(false);
+          setCoverConfirmed(false);
+          toast.error('Görsel analiz edilemedi! Lütfen kapağı net çeken bir fotoğraf yükleyin.', { id: 'ocr-toast' });
           toast.dismiss('ocr-toast');
         } finally {
           setIsOcrLoading(false);
@@ -335,12 +341,12 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
                     )}
                   </div>
 
-                  {/* Onay kutusu — sadece manuel yükleme yapıldığında */}
+                  {/* Onay durumu — sadece manuel yükleme yapıldığında */}
                   {isManualUpload && preview && (
                     <motion.div
                       initial={{ opacity: 0, y: -4 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className={`mt-2 p-3 border rounded-xl ${coverConfirmed && !ocrError ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}
+                      className={`mt-2 p-3 border rounded-xl bg-green-50 border-green-200`}
                     >
                       {isOcrLoading ? (
                         <div className="flex items-center gap-2 text-ink/60 text-xs font-medium py-1">
@@ -348,38 +354,12 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
                           Görsel yapay zeka ile inceleniyor...
                         </div>
                       ) : (
-                        <label className="flex items-start gap-3 cursor-pointer">
-                          <div className="relative mt-0.5">
-                            <input
-                              type="checkbox"
-                              checked={coverConfirmed}
-                              onChange={e => setCoverConfirmed(e.target.checked)}
-                              className="sr-only"
-                              disabled={coverConfirmed && !ocrError} // If auto-confirmed by OCR, prevent unchecking
-                            />
-                            <div
-                              className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                                coverConfirmed ? 'bg-green-500 border-green-500' : 'bg-white border-amber-400'
-                              } ${(coverConfirmed && !ocrError) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            >
-                              {coverConfirmed && <CheckCircle2 size={12} className="text-white" />}
-                            </div>
-                          </div>
-                          <div className="flex flex-col">
-                            {coverConfirmed && !ocrError ? (
-                              <span className="text-xs text-green-800 font-bold leading-relaxed">
-                                Yapay Zeka Onayı: Görsel, kitap adıyla başarıyla eşleşti.
-                              </span>
-                            ) : (
-                              <>
-                                <span className="text-xs text-amber-800 font-medium leading-relaxed">
-                                  Yüklediğim görsel <strong>"{formData.title || 'bu kitabın'}"</strong> kapağıdır ve kitap adıyla eşleşmektedir.
-                                </span>
-                                {ocrError && <span className="text-[10px] font-bold text-amber-700 mt-1 flex items-start gap-1"><AlertCircle size={12} className="shrink-0 mt-0.5" /> {ocrError}</span>}
-                              </>
-                            )}
-                          </div>
-                        </label>
+                        <div className="flex items-start gap-3">
+                          <CheckCircle2 size={16} className="text-green-500 mt-0.5" />
+                          <span className="text-xs text-green-800 font-bold leading-relaxed">
+                            Yapay Zeka Onayı: Görsel, kitap adıyla başarıyla eşleşti.
+                          </span>
+                        </div>
                       )}
                     </motion.div>
                   )}
@@ -429,7 +409,7 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
 
                 <button
                   type="submit"
-                  disabled={loading || (isManualUpload && !coverConfirmed)}
+                  disabled={loading || (isManualUpload && !coverConfirmed) || isOcrLoading}
                   className="w-full mt-1 bg-ink text-parchment-light py-4 rounded-xl font-bold shadow-lg shadow-ink/20 active:bg-ink/80 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Ekleniyor...' : 'Kütüphaneye Ekle'}
