@@ -10,6 +10,7 @@ export interface User {
   };
   lat?: number;
   lng?: number;
+  blockedUsers?: string[];
 }
 
 export interface Message {

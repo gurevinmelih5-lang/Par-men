@@ -42,7 +42,7 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
   // Confirmation that the uploaded image matches the book title
   const [coverConfirmed, setCoverConfirmed] = useState(false);
   const [isOcrLoading, setIsOcrLoading] = useState(false);
-  const [ocrError, setOcrError] = useState<string | null>(null);
+
 
   const resetForm = () => {
     setFormData({ title: '', author: '', cover: '', genre: '', condition: 'Good', pace: 'Medium', depth: 'Medium', timeCapsule: '' });
@@ -50,7 +50,7 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
     setPreview(null);
     setIsManualUpload(false);
     setCoverConfirmed(false);
-    setOcrError(null);
+    setIsManualUpload(false);
   };
 
   const handleClose = () => {
@@ -117,7 +117,7 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
         setPreview(URL.createObjectURL(compressedFile));
         setIsManualUpload(true);
         setCoverConfirmed(false);
-        setOcrError(null);
+        setCoverConfirmed(false);
 
         // OCR ile Kitap Adı Eşleşmesi Kontrolü
         setIsOcrLoading(true);

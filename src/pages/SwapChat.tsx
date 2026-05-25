@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { ChevronLeft, Send, BookOpen, CheckCheck, Ban } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronLeft, Send, BookOpen, CheckCheck, Ban, MoreVertical, Flag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { supabase } from '../lib/supabase';
@@ -40,6 +40,7 @@ export const SwapChat: React.FC = () => {
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
+  const [showOptions, setShowOptions] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -260,16 +261,58 @@ export const SwapChat: React.FC = () => {
           </button>
         )}
 
-        <button
-          type="button"
-          onClick={handleEndChat}
-          disabled={chatEnded}
-          className="w-11 h-11 flex items-center justify-center rounded-full text-red-500 active:bg-red-50 disabled:opacity-30 transition-colors flex-shrink-0"
-          title="Sohbeti Sonlandır"
-          aria-label="Sohbeti sonlandır"
-        >
-          <Ban size={22} />
-        </button>
+        <div className="relative flex-shrink-0">
+          <button
+            onClick={() => setShowOptions(!showOptions)}
+            className="w-11 h-11 flex items-center justify-center rounded-full text-ink/60 active:bg-ink/5 transition-colors"
+          >
+            <MoreVertical size={20} />
+          </button>
+
+          <AnimatePresence>
+            {showOptions && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                className="absolute right-0 top-12 w-48 bg-white rounded-xl shadow-lg border border-ink/5 py-1 z-50 overflow-hidden"
+              >
+                <button
+                  onClick={() => {
+                    useStore.getState().reportContent('user', activeSwapChat.otherUserId, 'Inappropriate behavior in SwapChat');
+                    setShowOptions(false);
+                  }}
+                  className="w-full px-4 py-3 flex items-center gap-2 text-sm font-medium text-ink/70 hover:bg-ink/5 transition-colors text-left"
+                >
+                  <Flag size={16} /> Şikayet Et
+                </button>
+                <button
+                  onClick={() => {
+                    if (window.confirm('Bu kullanıcıyı engellemek istediğinize emin misiniz?')) {
+                      useStore.getState().blockUser(activeSwapChat.otherUserId);
+                      setShowOptions(false);
+                      navigate(-1);
+                    }
+                  }}
+                  className="w-full px-4 py-3 flex items-center gap-2 text-sm font-bold text-red-600 hover:bg-red-50 transition-colors text-left border-t border-ink/5"
+                >
+                  <Ban size={16} /> Engelle
+                </button>
+                {!chatEnded && (
+                  <button
+                    onClick={() => {
+                      setShowOptions(false);
+                      handleEndChat();
+                    }}
+                    className="w-full px-4 py-3 flex items-center gap-2 text-sm font-bold text-red-600 hover:bg-red-50 transition-colors text-left border-t border-ink/5"
+                  >
+                    <Ban size={16} /> Sohbeti Sonlandır
+                  </button>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </header>
 
       {/* ─── Durum Bantları ─── */}

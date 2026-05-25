@@ -11,6 +11,7 @@ import { PublicProfile } from './pages/PublicProfile';
 import { SwapChat } from './pages/SwapChat';
 import { RoomPanel } from './pages/RoomPanel';
 import { Auth } from './pages/Auth';
+import { PrivacyPolicy } from './pages/PrivacyPolicy';
 import { UpdatePasswordForm } from './components/UpdatePasswordForm';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { Session } from '@supabase/supabase-js';
@@ -142,6 +143,23 @@ function App() {
                   className="h-full"
                 >
                   <RoomPanel />
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </div>
+        } />
+        <Route path="/privacy-policy" element={
+          <div className="flex justify-center bg-[#F5F0E6] min-h-[100dvh]">
+            <div className="w-full max-w-5xl bg-parchment-light relative shadow-2xl overflow-x-hidden min-h-[100dvh]">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={location.pathname}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15, ease: 'easeInOut' }}
+                >
+                  <PrivacyPolicy />
                 </motion.div>
               </AnimatePresence>
             </div>

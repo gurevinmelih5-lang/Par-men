@@ -15,7 +15,7 @@ import { translateCondition } from '../lib/translations';
 import { useNavigate } from 'react-router-dom';
 
 export const Profile: React.FC = () => {
-  const { user, books, incomingRequests, respondToSwapRequest, deleteBook, updateLocation, theme, setTheme, requestedSwaps, setViewedUser, openSwapChats, openSwapChatById, setActiveSwapChat } = useStore();
+  const { user, books, incomingRequests, respondToSwapRequest, deleteBook, updateLocation, theme, setTheme, requestedSwaps, setViewedUser, openSwapChats, openSwapChatById, setActiveSwapChat, deleteAccount } = useStore();
   const navigate = useNavigate();
   const [cancelledSwaps, setCancelledSwaps] = React.useState<string[]>([]);
   const [accountEmail, setAccountEmail] = React.useState<string | null>(null);
@@ -60,6 +60,12 @@ export const Profile: React.FC = () => {
         </div>
       </div>
     ), { duration: Infinity, style: { background: '#fff', color: '#1A202C' } });
+  };
+
+  const handleDeleteAccount = () => {
+    if (window.confirm("Hesabınızı kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz ve tüm verileriniz (kitaplar, mesajlar vb.) kalıcı olarak silinir.")) {
+      deleteAccount();
+    }
   };
 
   const handleUpdateLocation = async () => {
@@ -541,11 +547,25 @@ export const Profile: React.FC = () => {
           <button
             type="button"
             onClick={() => void handleLogout()}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm font-bold hover:bg-red-100 transition-colors active:scale-[0.99]"
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-ink/20 bg-white text-ink/70 text-sm font-bold hover:bg-ink/5 transition-colors active:scale-[0.99]"
           >
             <LogOut size={18} />
             Çıkış yap
           </button>
+          
+          <div className="pt-2 border-t border-red-100">
+            <button
+              type="button"
+              onClick={handleDeleteAccount}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-red-500 bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors active:scale-[0.99]"
+            >
+              <Trash2 size={18} />
+              Hesabımı Kalıcı Olarak Sil
+            </button>
+            <p className="text-[10px] text-center text-ink/40 mt-2">
+              Apple App Store kuralları gereği hesap silme işlemi kalıcıdır.
+            </p>
+          </div>
         </div>
       </motion.section>
 

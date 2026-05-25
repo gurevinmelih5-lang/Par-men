@@ -1,13 +1,14 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store/useStore';
-import { ChevronLeft, MapPin, Award, BookOpen, Check } from 'lucide-react';
+import { ChevronLeft, MapPin, Award, BookOpen, Check, MoreVertical, Flag, Ban } from 'lucide-react';
 import { translateCondition } from '../lib/translations';
 import { useNavigate } from 'react-router-dom';
 
 export const PublicProfile: React.FC = () => {
-  const { viewedUser, books, requestSwap, requestedSwaps } = useStore();
+  const { viewedUser, books, requestSwap, requestedSwaps, blockUser, reportContent } = useStore();
   const navigate = useNavigate();
+  const [showOptions, setShowOptions] = useState(false);
 
   if (!viewedUser) {
     return (
@@ -53,6 +54,47 @@ export const PublicProfile: React.FC = () => {
         >
           <ChevronLeft size={24} />
         </button>
+        <div className="relative">
+          <button 
+            onClick={() => setShowOptions(!showOptions)}
+            className="p-2 bg-white rounded-full shadow-sm text-ink/60 active:text-ink transition-colors tap-target"
+          >
+            <MoreVertical size={20} />
+          </button>
+          
+          <AnimatePresence>
+            {showOptions && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-ink/5 py-1 z-50 overflow-hidden"
+              >
+                <button 
+                  onClick={() => {
+                    reportContent('user', viewedUser?.id || '', 'Inappropriate behavior or content');
+                    setShowOptions(false);
+                  }}
+                  className="w-full px-4 py-3 flex items-center gap-2 text-sm font-medium text-ink/70 hover:bg-ink/5 transition-colors text-left"
+                >
+                  <Flag size={16} /> Şikayet Et
+                </button>
+                <button 
+                  onClick={() => {
+                    if (window.confirm('Bu kullanıcıyı engellemek istediğinize emin misiniz?')) {
+                      blockUser(viewedUser?.id || '');
+                      setShowOptions(false);
+                      navigate(-1);
+                    }
+                  }}
+                  className="w-full px-4 py-3 flex items-center gap-2 text-sm font-bold text-red-600 hover:bg-red-50 transition-colors text-left border-t border-ink/5"
+                >
+                  <Ban size={16} /> Kullanıcıyı Engelle
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </header>
 
       <div className="px-4 -mt-2">

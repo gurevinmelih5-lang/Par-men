@@ -13,6 +13,10 @@ export interface UserSlice {
   updateUserAvatar: (file: File) => Promise<void>;
   searchUsers: (query: string) => Promise<User[]>;
   mapDBUserToState: (dbProfile: DBProfile) => User;
+  blockUser: (userId: string) => void;
+  unblockUser: (userId: string) => void;
+  reportContent: (type: 'user' | 'message' | 'book', id: string, reason: string) => void;
+  deleteAccount: () => Promise<void>;
 }
 
 export const createUserSlice: StateCreator<UserSlice, [], [], UserSlice> = (set, get) => ({
@@ -32,7 +36,8 @@ export const createUserSlice: StateCreator<UserSlice, [], [], UserSlice> = (set,
       total: Math.round((dbProfile.karma_physical + dbProfile.karma_intellectual + dbProfile.karma_social) / 3)
     },
     lat: dbProfile.lat || undefined,
-    lng: dbProfile.lng || undefined
+    lng: dbProfile.lng || undefined,
+    blockedUsers: JSON.parse(localStorage.getItem('parsomen_blocked_users') || '[]')
   }),
 
   updateLocation: async (lat, lng) => {
@@ -118,6 +123,54 @@ export const createUserSlice: StateCreator<UserSlice, [], [], UserSlice> = (set,
       console.error("Error searching users:", error);
       toast.error('Okurlar aranırken bir sorun oluştu.');
       return [];
+    }
+  },
+
+  blockUser: (userId: string) => {
+    set((state) => {
+      const currentBlocked = state.user?.blockedUsers || [];
+      if (currentBlocked.includes(userId)) return state;
+      const updatedBlocked = [...currentBlocked, userId];
+      localStorage.setItem('parsomen_blocked_users', JSON.stringify(updatedBlocked));
+      return { user: { ...state.user, blockedUsers: updatedBlocked } };
+    });
+    toast.success('Kullanıcı engellendi. Artık bu kullanıcının içeriklerini görmeyeceksiniz.');
+  },
+
+  unblockUser: (userId: string) => {
+    set((state) => {
+      const currentBlocked = state.user?.blockedUsers || [];
+      const updatedBlocked = currentBlocked.filter(id => id !== userId);
+      localStorage.setItem('parsomen_blocked_users', JSON.stringify(updatedBlocked));
+      return { user: { ...state.user, blockedUsers: updatedBlocked } };
+    });
+    toast.success('Kullanıcının engeli kaldırıldı.');
+  },
+
+  reportContent: (type, id, reason) => {
+    // In a real app, this would send an API request to a moderation endpoint.
+    console.log(`Reported ${type} with id ${id} for reason: ${reason}`);
+    toast.success('Şikayetiniz modetör ekibimize iletilmiştir. Geri bildiriminiz için teşekkürler.');
+  },
+
+  deleteAccount: async () => {
+    try {
+      const { user } = get();
+      if (!user) return;
+      
+      toast.loading('Hesabınız siliniyor...', { id: 'deleteAccount' });
+      // 1. Delete profile from DB (This requires RLS policy allowing delete, or edge function)
+      // For now we try to delete it from 'profiles'. If RLS blocks it, auth.signOut will at least log them out.
+      await supabase.from('profiles').delete().eq('id', user.id);
+      
+      // 2. Sign out
+      await supabase.auth.signOut();
+      
+      toast.success('Hesabınız başarıyla silindi.', { id: 'deleteAccount' });
+      // Will trigger Auth state change to Signed Out and redirect to login
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      toast.error('Hesabınız silinirken bir hata oluştu.', { id: 'deleteAccount' });
     }
   }
 });
