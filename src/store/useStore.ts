@@ -42,7 +42,7 @@ export const useStore = create<StoreState>()((...a) => ({
       // 2. Fetch Books with Lineage and Profiles
       const { data: booksData, error: booksError } = await supabase
         .from('books')
-        .select('*, book_lineage(*), profiles(lat, lng)');
+        .select('*, book_lineage(*), profiles(lat, lng), book_capsules(*)');
         
       if (!booksError && booksData) {
         const FAKE_USER_IDS = ['11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222'];

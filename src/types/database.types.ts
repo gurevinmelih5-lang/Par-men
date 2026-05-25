@@ -20,6 +20,12 @@ export interface DBLineage {
   created_at: string;
 }
 
+export interface DBBookCapsule {
+  book_id: string;
+  message: string;
+  from_name: string;
+}
+
 export interface DBBook {
   id: string;
   title: string;
@@ -34,12 +40,11 @@ export interface DBBook {
   current_page: number | null;
   owner_id: string;
   distance_km: number;
-  time_capsule_message: string | null;
-  time_capsule_from: string | null;
   lat: number | null;
   lng: number | null;
   created_at: string;
   book_lineage?: DBLineage[];
+  book_capsules?: DBBookCapsule[];
   profiles?: Partial<DBProfile>;
 }
 

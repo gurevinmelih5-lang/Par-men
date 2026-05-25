@@ -82,6 +82,12 @@ export const Swap: React.FC = () => {
   const [mapMode, setMapMode] = useState<'swap' | 'literary' | 'atlas'>('swap');
   const [selectedAtlasLocation, setSelectedAtlasLocation] = useState<AtlasPick>(null);
   const [nearbyLocation, setNearbyLocation] = useState<{ bookTitle: string; location: StoryLoc } | null>(null);
+  const [showMap, setShowMap] = useState(false);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => setShowMap(true), 300);
+    return () => clearTimeout(timer);
+  }, []);
 
   const [selectedRouteBookId, setSelectedRouteBookId] = useState<string>('all');
   const [visitedCheckpoints, setVisitedCheckpoints] = useState<string[]>(() => {
@@ -728,16 +734,25 @@ export const Swap: React.FC = () => {
 
       {/* Interactive Map */}
       <motion.section variants={item} className="relative rounded-3xl overflow-hidden shadow-inner border border-ink/10" style={{ zIndex: 0, height: '50vw', minHeight: '220px', maxHeight: '340px' }}>
-        <MapContainer
-          center={[user.lat || 41.0082, user.lng || 28.9784]}
-          zoom={13}
-          scrollWheelZoom={true}
-          style={{ height: '100%', width: '100%', zIndex: 0 }}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-          />
+        {!showMap && (
+          <div className="absolute inset-0 flex items-center justify-center bg-parchment-light/50">
+            <div className="animate-pulse flex flex-col items-center">
+              <MapIcon size={32} className="text-ink/20 mb-2" />
+              <span className="text-xs font-bold text-ink/40 uppercase tracking-widest">Harita Yükleniyor...</span>
+            </div>
+          </div>
+        )}
+        {showMap && (
+          <MapContainer
+            center={[user.lat || 41.0082, user.lng || 28.9784]}
+            zoom={13}
+            scrollWheelZoom={true}
+            style={{ height: '100%', width: '100%', zIndex: 0 }}
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+            />
 
           {/* User location marker */}
           {user.lat && user.lng && (
@@ -826,6 +841,7 @@ export const Swap: React.FC = () => {
               );
             })}
         </MapContainer>
+        )}
       </motion.section>
 
       {/* Selected Gezgin sahne paneli */}
@@ -935,15 +951,23 @@ export const Swap: React.FC = () => {
                     <MapPin size={12} /> Kadıköy İskele (Güvenli Nokta)
                   </p>
                 </div>
-                <button
-                  onClick={() => {
-                    requestSwap(activeBook.id);
-                    setSelectedBook(null);
-                  }}
-                  className={`text-sm font-medium px-4 py-2 rounded-xl transition-colors shadow-md ${activeBook.isLegendary ? 'bg-karma text-ink shadow-karma/30' : 'bg-ink text-parchment-light shadow-ink/20 hover:bg-ink/90'}`}
-                >
-                  Takas İste
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowQR(true)}
+                    className="text-sm font-bold px-4 py-2 rounded-xl transition-colors bg-karma text-ink shadow-md shadow-karma/30 hover:bg-karma/90"
+                  >
+                    QR ile Onayla
+                  </button>
+                  <button
+                    onClick={() => {
+                      requestSwap(activeBook.id);
+                      setSelectedBook(null);
+                    }}
+                    className={`text-sm font-medium px-4 py-2 rounded-xl transition-colors shadow-md ${activeBook.isLegendary ? 'bg-ink text-parchment-light shadow-ink/20 hover:bg-ink/90' : 'bg-ink text-parchment-light shadow-ink/20 hover:bg-ink/90'}`}
+                  >
+                    Takas İste
+                  </button>
+                </div>
               </div>
             </div>
           </motion.div>

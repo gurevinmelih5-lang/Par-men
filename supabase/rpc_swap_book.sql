@@ -10,7 +10,19 @@ CREATE OR REPLACE FUNCTION public.swap_book(
   p_date TEXT
 )
 RETURNS void AS $$
+  DECLARE
+    v_current_owner UUID;
 BEGIN
+  -- 0. Authorization Check
+  SELECT owner_id INTO v_current_owner FROM public.books WHERE id = p_book_id;
+  IF v_current_owner IS NULL THEN
+    RAISE EXCEPTION 'Book not found';
+  END IF;
+  
+  IF v_current_owner != auth.uid() THEN
+    RAISE EXCEPTION 'Unauthorized: Only the current owner can swap this book.';
+  END IF;
+
   -- 1. Kitabın sahibini güncelle
   UPDATE public.books 
   SET owner_id = p_new_owner_id 

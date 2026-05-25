@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Layers, Star, MessageSquareQuote, MessageCircle, Send, Book, ChevronDown, ChevronUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import toast from 'react-hot-toast';
 
 export const ScriptumFeed: React.FC = () => {
-  const { scriptums, books, user, addScriptum, likeScriptum, addReply } = useStore();
+  const { scriptums, books, user, addScriptum, likeScriptum, addReply, setViewedUser } = useStore();
+  const navigate = useNavigate();
   const [newPostContent, setNewPostContent] = useState('');
   const [selectedBookId, setSelectedBookId] = useState<string>('');
   const [isManualBook, setIsManualBook] = useState(false);
@@ -152,11 +154,16 @@ export const ScriptumFeed: React.FC = () => {
               className="bg-white rounded-3xl p-5 shadow-sm border border-ink/5"
             >
               <div className="flex items-center gap-3 mb-3">
-                <img src={scriptum.userAvatar} alt="User" className="w-10 h-10 rounded-full object-cover border border-ink/10" />
-                <div>
-                  <p className="text-sm font-bold text-ink">{scriptum.userName}</p>
-                  <p className="text-[10px] text-ink/50">{scriptum.timestamp || 'Yeni'}</p>
-                </div>
+                <button 
+                  className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity text-left"
+                  onClick={() => { setViewedUser({ id: scriptum.userId, name: scriptum.userName, avatar: scriptum.userAvatar, karma: { physical: 0, intellectual: 0, social: 0, total: 0 } } as any); navigate(`/public-profile/${scriptum.userId}`); }}
+                >
+                  <img src={scriptum.userAvatar} alt="User" className="w-10 h-10 rounded-full object-cover border border-ink/10" />
+                  <div>
+                    <p className="text-sm font-bold text-ink">{scriptum.userName}</p>
+                    <p className="text-[10px] text-ink/50">{scriptum.timestamp || 'Yeni'}</p>
+                  </div>
+                </button>
               </div>
 
               {book && (
@@ -186,15 +193,18 @@ export const ScriptumFeed: React.FC = () => {
               <div className="relative mb-4 mt-2">
                 {(scriptum.bookId || scriptum.customBookTitle) && <MessageSquareQuote size={20} className="absolute -top-1 -left-1 text-karma/20" />}
                 {scriptum.highlightedText ? (
-                  <p
-                    className="font-serif text-sm leading-relaxed text-ink/90 italic pl-6"
-                    dangerouslySetInnerHTML={{
-                      __html: `"${scriptum.content.replace(
-                        scriptum.highlightedText,
-                        `<span class="bg-karma/30 text-ink font-bold px-1 rounded">${scriptum.highlightedText}</span>`
-                      )}"`,
-                    }}
-                  />
+                  <p className="font-serif text-sm leading-relaxed text-ink/90 italic pl-6">
+                    "{scriptum.content.split(scriptum.highlightedText).map((part, i, arr) => (
+                      <React.Fragment key={i}>
+                        {part}
+                        {i < arr.length - 1 && (
+                          <span className="bg-karma/30 text-ink font-bold px-1 rounded">
+                            {scriptum.highlightedText}
+                          </span>
+                        )}
+                      </React.Fragment>
+                    ))}"
+                  </p>
                 ) : (
                   <p className={`text-sm leading-relaxed text-ink/90 ${(scriptum.bookId || scriptum.customBookTitle) ? 'font-serif italic pl-6' : 'font-sans'}`}>
                     {scriptum.content}
@@ -232,9 +242,14 @@ export const ScriptumFeed: React.FC = () => {
                     <div className="space-y-4 mb-4">
                       {replies.map(reply => (
                         <div key={reply.id} className="flex gap-3">
-                          <img src={reply.userAvatar} alt="Reply User" className="w-6 h-6 rounded-full object-cover mt-1 border border-ink/10" />
+                          <button 
+                            className="cursor-pointer hover:opacity-80 transition-opacity shrink-0"
+                            onClick={() => { setViewedUser({ id: reply.userId, name: reply.userName, avatar: reply.userAvatar, karma: { physical: 0, intellectual: 0, social: 0, total: 0 } } as any); navigate(`/public-profile/${reply.userId}`); }}
+                          >
+                            <img src={reply.userAvatar} alt="Reply User" className="w-6 h-6 rounded-full object-cover mt-1 border border-ink/10" />
+                          </button>
                           <div className="bg-parchment-light/50 p-2.5 rounded-2xl rounded-tl-none text-sm border border-ink/5 flex-1">
-                            <p className="font-bold text-[10px] text-ink/60 mb-0.5">{reply.userName}</p>
+                            <p className="font-bold text-[10px] text-ink/60 mb-0.5 cursor-pointer hover:underline" onClick={() => { setViewedUser({ id: reply.userId, name: reply.userName, avatar: reply.userAvatar, karma: { physical: 0, intellectual: 0, social: 0, total: 0 } } as any); navigate(`/public-profile/${reply.userId}`); }}>{reply.userName}</p>
                             <p className="text-ink/90">{reply.content}</p>
                           </div>
                         </div>

@@ -7,10 +7,14 @@ import toast from 'react-hot-toast';
 import { translatePace, translateDepth } from '../lib/translations';
 
 // Karma threshold required to create a room
+import { useNavigate } from 'react-router-dom';
+
+// Karma threshold required to create a room
 const ROOM_CREATION_KARMA_THRESHOLD = 75;
 
 export const Discovery: React.FC = () => {
-  const { books, user, searchUsers, setViewedUser, setActiveTab, setSelectedBook } = useStore();
+  const { books, user, searchUsers, setViewedUser } = useStore();
+  const navigate = useNavigate();
   const [tempo, setTempo] = useState<number>(50);
   const [depth, setDepth] = useState<number>(50);
   const [searchTab, setSearchTab] = useState<'books' | 'users' | 'rooms'>('books');
@@ -188,7 +192,7 @@ export const Discovery: React.FC = () => {
                   key={book.id}
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  onClick={() => { setSelectedBook(book.id); setActiveTab('bookDetail'); }}
+                  onClick={() => { navigate(`/book/${book.id}`); }}
                   className="flex gap-4 p-3 bg-white rounded-2xl shadow-sm border border-ink/5 hover:shadow-md transition-shadow cursor-pointer group"
                 >
                   <div className="w-20 h-28 rounded-lg overflow-hidden bg-parchment-dark flex-shrink-0">
@@ -236,7 +240,7 @@ export const Discovery: React.FC = () => {
                 <motion.div
                   key={resultUser.id}
                   initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                  onClick={() => { setViewedUser(resultUser); setActiveTab('publicProfile'); }}
+                  onClick={() => { setViewedUser(resultUser); navigate(`/public-profile/${resultUser.id}`); }}
                   className="flex items-center gap-4 p-4 bg-white rounded-2xl shadow-sm border border-ink/5 hover:shadow-md transition-all cursor-pointer"
                 >
                   <div className="w-12 h-12 rounded-full overflow-hidden bg-parchment-dark border border-ink/10 flex-shrink-0">

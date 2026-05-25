@@ -10,10 +10,14 @@ import { SwapTableModal } from '../components/SwapTableModal';
 import { getCurrentLocation } from '../lib/location';
 import imageCompression from 'browser-image-compression';
 import { supabase } from '../lib/supabase';
+import { compressImage } from '../lib/image';
 import toast from 'react-hot-toast';
 import { translateCondition } from '../lib/translations';
+import { useNavigate } from 'react-router-dom';
+
 export const Profile: React.FC = () => {
-  const { user, books, incomingRequests, respondToSwapRequest, deleteBook, updateLocation, setActiveTab, theme, setTheme, requestedSwaps, setViewedUser, openSwapChats, openSwapChatById, setActiveSwapChat } = useStore();
+  const { user, books, incomingRequests, respondToSwapRequest, deleteBook, updateLocation, theme, setTheme, requestedSwaps, setViewedUser, openSwapChats, openSwapChatById, setActiveSwapChat } = useStore();
+  const navigate = useNavigate();
   const [cancelledSwaps, setCancelledSwaps] = React.useState<string[]>([]);
   const [accountEmail, setAccountEmail] = React.useState<string | null>(null);
 
@@ -50,7 +54,7 @@ export const Profile: React.FC = () => {
               return;
             }
             setActiveSwapChat(null);
-            setActiveTab('dashboard');
+            navigate('/');
             toast.success('Güvenle çıkış yaptın.');
           }} className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold">Evet, Çıkış Yap</button>
           <button onClick={() => toast.dismiss(t.id)} className="bg-ink/10 px-3 py-1.5 rounded-lg text-xs font-bold text-ink">İptal</button>
@@ -73,18 +77,14 @@ export const Profile: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    toast((t) => (
-      <div>
-        <p className="text-sm font-medium mb-3">Bu kitabı silmek istediğinize emin misiniz?</p>
-        <div className="flex gap-2">
-          <button onClick={async () => {
-            toast.dismiss(t.id);
-            await deleteBook(id);
-          }} className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold">Evet, Sil</button>
-          <button onClick={() => toast.dismiss(t.id)} className="bg-ink/10 px-3 py-1.5 rounded-lg text-xs font-bold text-ink">İptal</button>
-        </div>
-      </div>
-    ), { duration: Infinity, style: { background: '#fff', color: '#1A202C' } });
+    if (window.confirm("Bu kitabı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.")) {
+      try {
+        await deleteBook(id);
+        toast.success("Kitap başarıyla silindi.");
+      } catch (err) {
+        toast.error("Kitap silinirken bir hata oluştu.");
+      }
+    }
   };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -92,12 +92,7 @@ export const Profile: React.FC = () => {
       const file = e.target.files[0];
       try {
         setIsUploadingAvatar(true);
-        const options = {
-          maxSizeMB: 0.5,
-          maxWidthOrHeight: 400,
-          useWebWorker: true,
-        };
-        const compressed = await imageCompression(file, options);
+        const compressed = await compressImage(file, { maxSizeMB: 0.5, maxWidthOrHeight: 400 });
         await useStore.getState().updateUserAvatar(compressed);
       } catch (error) {
         console.error('Avatar upload error:', error);
@@ -170,17 +165,22 @@ export const Profile: React.FC = () => {
             </button>
           </div>
         </div>
-        <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-          <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-karma shadow-lg relative z-10 bg-parchment-dark">
-            <img src={user.avatar} alt={user.name} className={`w-full h-full object-cover transition-opacity ${isUploadingAvatar ? 'opacity-50' : 'group-hover:opacity-80'}`} />
-            <div className="absolute inset-0 bg-ink/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <Camera size={20} className="text-white" />
-            </div>
-            {isUploadingAvatar && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        <div className="relative group cursor-pointer">
+          <div className="flex flex-col items-center">
+            <motion.div 
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+              className={`relative w-28 h-28 rounded-full border-4 mb-4 ${isGold ? 'border-karma shadow-[0_0_15px_rgba(212,175,55,0.5)]' : 'border-white shadow-md'}`}
+            >
+              <div className="w-full h-full rounded-full overflow-hidden bg-parchment-dark group">
+                <img src={user.avatar} alt={user.name} className={`w-full h-full object-cover transition-opacity ${isUploadingAvatar ? 'opacity-50' : 'group-hover:opacity-80'}`} />
+                <label className="absolute inset-0 flex items-center justify-center bg-ink/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                  <Camera size={24} className="text-white" />
+                  <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} disabled={isUploadingAvatar} />
+                </label>
               </div>
-            )}
+            </motion.div>
           </div>
           {/* Decorative badge background */}
           <div className="absolute inset-0 bg-karma/20 scale-125 rounded-full animate-pulse -z-10" />
@@ -197,7 +197,7 @@ export const Profile: React.FC = () => {
       {/* Karma Decay Warning */}
       <motion.div 
         variants={item} 
-        onClick={() => setActiveTab('discovery')}
+        onClick={() => navigate('/discovery')}
         className="bg-orange-50 border border-orange-200 p-3 rounded-xl flex items-center justify-between shadow-sm cursor-pointer hover:bg-orange-100 transition-colors group relative overflow-hidden"
       >
         <div className="absolute inset-0 bg-gradient-to-r from-orange-400/0 via-orange-400/10 to-orange-400/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
@@ -303,7 +303,7 @@ export const Profile: React.FC = () => {
                   {/* Header: requester info */}
                   <div className="flex items-center gap-3 p-4 border-b border-ink/5">
                     <button
-                      onClick={() => { setViewedUser(requesterUser as any); setActiveTab('publicProfile'); }}
+                      onClick={() => { setViewedUser(requesterUser as any); navigate(`/public-profile/${requesterUser?.id}`); }}
                       className="relative flex-shrink-0 group"
                       title="Profili Görüntüle"
                     >
@@ -318,7 +318,7 @@ export const Profile: React.FC = () => {
                     </button>
                     <div className="flex-grow min-w-0">
                       <button
-                        onClick={() => { setViewedUser(requesterUser as any); setActiveTab('publicProfile'); }}
+                        onClick={() => { setViewedUser(requesterUser as any); navigate(`/public-profile/${requesterUser?.id}`); }}
                         className="font-bold text-sm text-ink hover:text-karma transition-colors text-left"
                       >
                         {req.requesterName}
@@ -334,7 +334,7 @@ export const Profile: React.FC = () => {
                   {requestedBook && (
                     <div
                       className="flex items-center gap-3 px-4 py-3 bg-parchment-light/50 cursor-pointer hover:bg-parchment-light transition-colors"
-                      onClick={() => { useStore.getState().setSelectedBook(requestedBook.id); setActiveTab('bookDetail'); }}
+                      onClick={() => { navigate(`/book/${requestedBook.id}`); }}
                     >
                       <div className="w-10 h-14 rounded-lg overflow-hidden bg-parchment-dark flex-shrink-0 shadow-sm">
                         <img src={requestedBook.cover} alt={requestedBook.title} className="w-full h-full object-cover" />
@@ -389,7 +389,10 @@ export const Profile: React.FC = () => {
               <button
                 key={s.swapId}
                 type="button"
-                onClick={() => void openSwapChatById(s.swapId, { goToChatTab: true })}
+                onClick={async () => {
+                  await openSwapChatById(s.swapId);
+                  navigate(`/chat/${s.swapId}`);
+                }}
                 className="w-full flex items-center gap-3 p-3 bg-white rounded-2xl shadow-sm border border-green-100 text-left hover:border-green-200 transition-colors"
               >
                 <div className="w-10 h-14 rounded-lg overflow-hidden bg-parchment-dark flex-shrink-0 shadow-sm">
@@ -441,7 +444,7 @@ export const Profile: React.FC = () => {
 
                 <div
                   className="w-14 h-20 rounded-xl overflow-hidden bg-parchment-dark flex-shrink-0 cursor-pointer"
-                  onClick={() => { useStore.getState().setSelectedBook(book.id); setActiveTab('bookDetail'); }}
+                  onClick={() => { navigate(`/book/${book.id}`); }}
                 >
                   <img src={book.cover} alt={book.title} className="w-full h-full object-cover" />
                 </div>
@@ -449,7 +452,7 @@ export const Profile: React.FC = () => {
                 <div className="flex flex-col flex-grow min-w-0 py-0.5">
                   <h3
                     className="font-serif font-bold text-sm leading-tight truncate cursor-pointer hover:text-karma transition-colors"
-                    onClick={() => { useStore.getState().setSelectedBook(book.id); setActiveTab('bookDetail'); }}
+                    onClick={() => { navigate(`/book/${book.id}`); }}
                   >
                     {book.title}
                   </h3>
@@ -495,31 +498,31 @@ export const Profile: React.FC = () => {
           <div className="grid grid-cols-2 gap-4">
             {myBooks.map(book => (
               <div key={book.id} className="bg-white p-3 rounded-2xl shadow-sm border border-ink/5 flex flex-col">
-                <div className="relative h-40 mb-3 rounded-xl overflow-hidden bg-parchment-dark group">
+                <div className="relative h-40 mb-3 rounded-xl overflow-hidden bg-parchment-dark">
                   <img src={book.cover} alt={book.title} className="w-full h-full object-cover opacity-90" />
-                  
-                  {/* Edit/Delete Buttons Overlay */}
-                  <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                    <button 
-                      onClick={() => setEditingBook(book)}
-                      className="w-8 h-8 rounded-full bg-white/90 text-ink flex items-center justify-center hover:scale-110 transition-transform shadow-md backdrop-blur-sm"
-                    >
-                      <Edit2 size={14} />
-                    </button>
-                    <button 
-                      onClick={() => handleDelete(book.id)}
-                      className="w-8 h-8 rounded-full bg-red-500/90 text-white flex items-center justify-center hover:scale-110 transition-transform shadow-md backdrop-blur-sm"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
                 </div>
                 <h3 className="font-serif font-bold text-sm leading-tight truncate">{book.title}</h3>
                 <p className="text-xs text-ink/60 truncate mb-2">{book.author}</p>
-                <div className="mt-auto flex justify-between items-center">
-                  <span className="text-[10px] px-2 py-1 bg-parchment-light rounded text-ink/70 font-medium">
+                <div className="mt-auto flex justify-between items-center border-t border-ink/5 pt-2">
+                  <span className="text-[10px] px-2 py-1 bg-parchment-light rounded text-ink/70 font-medium truncate max-w-[50%]">
                     {translateCondition(book.condition || '')}
                   </span>
+                  <div className="flex gap-1">
+                    <button 
+                      onClick={() => setEditingBook(book)}
+                      className="w-7 h-7 rounded-full bg-ink/5 text-ink flex items-center justify-center hover:bg-karma hover:text-white transition-colors"
+                      title="Düzenle"
+                    >
+                      <Edit2 size={12} />
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(book.id)}
+                      className="w-7 h-7 rounded-full bg-ink/5 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors"
+                      title="Sil"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

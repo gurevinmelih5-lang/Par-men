@@ -16,6 +16,15 @@
     -moz-osx-font-smoothing: grayscale;
     overscroll-behavior: none;
     overflow-x: hidden;
+    -webkit-touch-callout: none; /* Disable long-press menus */
+    -webkit-user-select: none; /* Disable text selection */
+    user-select: none;
+  }
+  
+  /* Allow text selection in inputs */
+  input, textarea, select {
+    -webkit-user-select: auto;
+    user-select: auto;
   }
   #root {
     width: 100%;

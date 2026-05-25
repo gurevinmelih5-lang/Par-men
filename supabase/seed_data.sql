@@ -16,13 +16,21 @@ UPDATE public.profiles SET lat = 40.990, lng = 29.020, karma_physical = 85, karm
 UPDATE public.profiles SET lat = 41.042, lng = 29.002, karma_physical = 75, karma_intellectual = 95 WHERE id = '22222222-2222-2222-2222-222222222222';
 
 -- 3. Örnek Kitaplar
-INSERT INTO public.books (id, title, author, cover_url, condition, pace, depth, owner_id, lat, lng, time_capsule_message, time_capsule_from)
+INSERT INTO public.books (id, title, author, cover_url, condition, pace, depth, owner_id, lat, lng)
 VALUES
-('33333333-3333-3333-3333-333333333333', '1984', 'George Orwell', 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=400', 'Good', 'Medium', 'High', '11111111-1111-1111-1111-111111111111', 40.990, 29.020, 'Büyük Birader her zaman seni izliyor. Bu kitabı okurken kameranı bantlamak isteyebilirsin.', 'Caner Öz'),
-('44444444-4444-4444-4444-444444444444', 'Otostopçunun Galaksi Rehberi', 'Douglas Adams', 'https://images.unsplash.com/photo-1618666012174-83b441c0bc76?auto=format&fit=crop&q=80&w=400', 'Mint', 'Fast', 'Medium', '22222222-2222-2222-2222-222222222222', 41.042, 29.002, 'Panik Yapma! Ve havlunu yanından asla ayırma.', 'Elif Demir'),
-('55555555-5555-5555-5555-555555555555', 'Fahrenheit 451', 'Ray Bradbury', 'https://images.unsplash.com/photo-1589829085413-56de8ae18c73?auto=format&fit=crop&q=80&w=400', 'Fair', 'Fast', 'High', '11111111-1111-1111-1111-111111111111', 40.990, 29.020, NULL, NULL),
-('66666666-6666-6666-6666-666666666666', 'Yüzyıllık Yalnızlık', 'Gabriel García Márquez', 'https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&q=80&w=400', 'Poor', 'Slow', 'High', '22222222-2222-2222-2222-222222222222', 41.042, 29.002, 'Macondo yağmurlarında kaybolmak harikaydı.', 'Elif Demir')
+('33333333-3333-3333-3333-333333333333', '1984', 'George Orwell', 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=400', 'Good', 'Medium', 'High', '11111111-1111-1111-1111-111111111111', 40.990, 29.020),
+('44444444-4444-4444-4444-444444444444', 'Otostopçunun Galaksi Rehberi', 'Douglas Adams', 'https://images.unsplash.com/photo-1618666012174-83b441c0bc76?auto=format&fit=crop&q=80&w=400', 'Mint', 'Fast', 'Medium', '22222222-2222-2222-2222-222222222222', 41.042, 29.002),
+('55555555-5555-5555-5555-555555555555', 'Fahrenheit 451', 'Ray Bradbury', 'https://images.unsplash.com/photo-1589829085413-56de8ae18c73?auto=format&fit=crop&q=80&w=400', 'Fair', 'Fast', 'High', '11111111-1111-1111-1111-111111111111', 40.990, 29.020),
+('66666666-6666-6666-6666-666666666666', 'Yüzyıllık Yalnızlık', 'Gabriel García Márquez', 'https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&q=80&w=400', 'Poor', 'Slow', 'High', '22222222-2222-2222-2222-222222222222', 41.042, 29.002)
 ON CONFLICT (id) DO NOTHING;
+
+-- Zaman Kapsülleri (Gizli kalması için ayrı tabloda)
+INSERT INTO public.book_capsules (book_id, message, from_name)
+VALUES
+('33333333-3333-3333-3333-333333333333', 'Büyük Birader her zaman seni izliyor. Bu kitabı okurken kameranı bantlamak isteyebilirsin.', 'Caner Öz'),
+('44444444-4444-4444-4444-444444444444', 'Panik Yapma! Ve havlunu yanından asla ayırma.', 'Elif Demir'),
+('66666666-6666-6666-6666-666666666666', 'Macondo yağmurlarında kaybolmak harikaydı.', 'Elif Demir')
+ON CONFLICT (book_id) DO NOTHING;
 
 -- 4. Biraz Şecere (Yolculuk) Geçmişi Ekleyelim
 INSERT INTO public.book_lineage (book_id, city, owner_name, date)

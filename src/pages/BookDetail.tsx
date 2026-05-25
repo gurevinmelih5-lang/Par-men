@@ -5,9 +5,12 @@ import toast from 'react-hot-toast';
 import { useStore } from '../store/useStore';
 import { AddScriptumModal } from '../components/AddScriptumModal';
 import { translateCondition, translatePace, translateDepth } from '../lib/translations';
+import { useNavigate, useParams } from 'react-router-dom';
 
 export const BookDetail: React.FC = () => {
-  const { books, scriptums, setActiveTab, goBack, user, selectedBookId, likeScriptum } = useStore();
+  const { books, scriptums, user, likeScriptum } = useStore();
+  const navigate = useNavigate();
+  const { id: selectedBookId } = useParams<{ id: string }>();
 
   const handleShare = async (title: string, author: string) => {
     const text = `"${title}" – ${author} | Parşömen'de keşfet!`;
@@ -15,14 +18,14 @@ export const BookDetail: React.FC = () => {
       if (navigator.share) {
         await navigator.share({ title, text, url: window.location.href });
       } else {
-        await navigator.clipboard.writeText(text);
+        await navigator.clipboard.writeText(window.location.href);
         toast.success('Bağlantı panoya kopyalandı!');
       }
     } catch {
       // user cancelled share
     }
   };
-  const book = books.find(b => b.id === selectedBookId) || books[0]; // fallback to first book
+  const book = books.find(b => b.id === selectedBookId) || books[0]; // fallback to first book if not found by id
   const bookScriptums = book ? scriptums.filter(s => s.bookId === book.id) : [];
   const isOwner = book ? book.ownerId === user.id : false;
   const isRequested = book ? useStore(state => state.requestedSwaps).includes(book.id) : false;
@@ -49,7 +52,7 @@ export const BookDetail: React.FC = () => {
         <h2 className="font-serif text-2xl text-ink mb-2">Henüz Bir Kitap Yok</h2>
         <p className="text-ink/60 text-sm mb-6">Sisteme henüz hiç kitap eklenmemiş. Profilinden ilk kitabı sen ekleyebilirsin.</p>
         <button 
-          onClick={() => setActiveTab('profile')}
+          onClick={() => navigate('/profile')}
           className="bg-ink text-parchment-light px-6 py-2 rounded-full font-medium"
         >
           Profile Git
@@ -68,7 +71,7 @@ export const BookDetail: React.FC = () => {
       {/* Header */}
       <header className="absolute top-0 left-0 right-0 p-4 z-20 flex justify-between items-center text-parchment-light">
         <button 
-          onClick={() => goBack()}
+          onClick={() => navigate(-1)}
           className="w-11 h-11 flex items-center justify-center bg-ink/40 backdrop-blur-md rounded-full hover:bg-ink/60 transition-colors"
         >
           <ChevronLeft size={24} />
@@ -290,15 +293,18 @@ export const BookDetail: React.FC = () => {
                     <MessageSquareQuote size={20} className="absolute top-4 right-4 text-karma/30" />
                     
                     {scriptum.highlightedText ? (
-                      <p 
-                        className="font-serif text-sm leading-relaxed mb-4 text-ink/90 relative z-10 italic"
-                        dangerouslySetInnerHTML={{
-                          __html: `"${scriptum.content.replace(
-                            scriptum.highlightedText, 
-                            `<span class="bg-karma/30 text-ink font-bold px-1 rounded">${scriptum.highlightedText}</span>`
-                          )}"`
-                        }}
-                      />
+                      <p className="font-serif text-sm leading-relaxed mb-4 text-ink/90 relative z-10 italic">
+                        "{scriptum.content.split(scriptum.highlightedText).map((part, i, arr) => (
+                          <React.Fragment key={i}>
+                            {part}
+                            {i < arr.length - 1 && (
+                              <span className="bg-karma/30 text-ink font-bold px-1 rounded">
+                                {scriptum.highlightedText}
+                              </span>
+                            )}
+                          </React.Fragment>
+                        ))}"
+                      </p>
                     ) : (
                       <p className="font-serif text-sm leading-relaxed mb-4 text-ink/90 relative z-10 italic">
                         "{scriptum.content}"
@@ -306,12 +312,15 @@ export const BookDetail: React.FC = () => {
                     )}
 
                     <div className="flex items-center justify-between border-t border-ink/5 pt-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-parchment-dark overflow-hidden">
-                           <img src={scriptum.userAvatar} alt="User" />
+                      <button 
+                        className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity text-left"
+                        onClick={(e) => { e.stopPropagation(); useStore.getState().setViewedUser({ id: scriptum.userId, name: scriptum.userName, avatar: scriptum.userAvatar, karma: { physical: 0, intellectual: 0, social: 0, total: 0 } } as any); navigate(`/public-profile/${scriptum.userId}`); }}
+                      >
+                        <div className="w-6 h-6 rounded-full bg-parchment-dark overflow-hidden flex-shrink-0">
+                           <img src={scriptum.userAvatar} alt="User" className="w-full h-full object-cover" />
                         </div>
-                        <p className="text-[10px] text-ink/60 font-bold uppercase tracking-wide">{scriptum.userName}</p>
-                      </div>
+                        <p className="text-[10px] text-ink/60 font-bold uppercase tracking-wide truncate">{scriptum.userName}</p>
+                      </button>
                       <button 
                         onClick={() => likeScriptum(scriptum.id)}
                         className="flex items-center gap-1 text-[11px] text-karma font-bold hover:text-karma/80 transition-colors"
@@ -335,8 +344,13 @@ export const BookDetail: React.FC = () => {
                             <div className="absolute -left-[19px] top-2 w-2.5 h-2.5 rounded-full bg-karma/60 border-2 border-parchment-light" />
                             <div className="bg-parchment-light/60 rounded-xl p-3">
                               <div className="flex items-center gap-2 mb-1.5">
-                                <img src={reply.userAvatar} alt={reply.userName} className="w-5 h-5 rounded-full object-cover" />
-                                <span className="text-[10px] font-bold text-ink/70">{reply.userName}</span>
+                                <button 
+                                  className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                                  onClick={(e) => { e.stopPropagation(); useStore.getState().setViewedUser({ id: reply.userId, name: reply.userName, avatar: reply.userAvatar, karma: { physical: 0, intellectual: 0, social: 0, total: 0 } } as any); navigate(`/public-profile/${reply.userId}`); }}
+                                >
+                                  <img src={reply.userAvatar} alt={reply.userName} className="w-5 h-5 rounded-full object-cover" />
+                                  <span className="text-[10px] font-bold text-ink/70">{reply.userName}</span>
+                                </button>
                                 <span className="text-[9px] text-ink/40 ml-auto">{reply.timestamp}</span>
                               </div>
                               <p className="font-serif text-xs text-ink/80 leading-relaxed italic">"{reply.content}"</p>

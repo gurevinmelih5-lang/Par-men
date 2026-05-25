@@ -1,17 +1,20 @@
 import React from 'react';
 import { Home, Compass, MapPin, User as UserIcon, Layers } from 'lucide-react';
 import { useStore } from '../../store/useStore';
+import { useLocation, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 
 export const BottomNav: React.FC = () => {
-  const { activeTab, setActiveTab, requestedSwaps, openSwapChats } = useStore();
+  const { requestedSwaps, openSwapChats } = useStore();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const tabs = [
-    { id: 'dashboard' as const, icon: Home, label: 'Pano' },
-    { id: 'discovery' as const, icon: Compass, label: 'Keşfet' },
-    { id: 'scriptumFeed' as const, icon: Layers, label: 'Akış' },
-    { id: 'swap' as const, icon: MapPin, label: 'Takas' },
-    { id: 'profile' as const, icon: UserIcon, label: 'Profil' },
+    { id: 'dashboard', path: '/', icon: Home, label: 'Pano' },
+    { id: 'discovery', path: '/discovery', icon: Compass, label: 'Keşfet' },
+    { id: 'scriptumFeed', path: '/feed', icon: Layers, label: 'Akış' },
+    { id: 'swap', path: '/swap', icon: MapPin, label: 'Takas' },
+    { id: 'profile', path: '/profile', icon: UserIcon, label: 'Profil' },
   ];
 
   return (
@@ -22,12 +25,12 @@ export const BottomNav: React.FC = () => {
       <div className="max-w-md mx-auto flex justify-around items-stretch" style={{ minHeight: '56px' }}>
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
+          const isActive = location.pathname === tab.path;
           return (
             <button
               key={tab.id}
               type="button"
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => navigate(tab.path)}
               className={clsx(
                 'flex flex-col items-center justify-center w-full flex-1 space-y-0.5 transition-all duration-200 relative active:scale-90 tap-target',
                 isActive ? 'text-ink' : 'text-ink/40'

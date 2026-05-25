@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, Send, BookOpen, CheckCheck, Ban } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
@@ -34,10 +35,9 @@ export const SwapChat: React.FC = () => {
   const {
     user,
     activeSwapChat,
-    goBack,
     endSwapChat,
-    setActiveTab,
   } = useStore();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -138,7 +138,7 @@ export const SwapChat: React.FC = () => {
           <BookOpen size={40} className="mx-auto text-ink/20 mb-4" />
           <p className="font-serif text-lg text-ink/60">Aktif bir takas sohbeti bulunamadı.</p>
           <button
-            onClick={() => setActiveTab('profile')}
+            onClick={() => navigate('/profile')}
             className="mt-4 text-sm font-bold text-karma underline min-h-[44px] px-4"
           >
             Profilime Dön
@@ -215,23 +215,28 @@ export const SwapChat: React.FC = () => {
       >
         <button
           type="button"
-          onClick={() => goBack()}
+          onClick={() => navigate(-1)}
           className="w-11 h-11 flex items-center justify-center rounded-full text-ink/60 active:bg-parchment-light transition-colors flex-shrink-0"
           aria-label="Geri"
         >
           <ChevronLeft size={24} />
         </button>
 
-        <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-karma/40 flex-shrink-0">
-          <img src={activeSwapChat.otherUserAvatar} alt="" className="w-full h-full object-cover" />
-        </div>
+        <button 
+          onClick={() => { useStore.getState().setViewedUser({ id: activeSwapChat.otherUserId, name: activeSwapChat.otherUserName, avatar: activeSwapChat.otherUserAvatar, karma: { physical: 0, intellectual: 0, social: 0, total: 0 } } as any); navigate(`/public-profile/${activeSwapChat.otherUserId}`); }}
+          className="flex items-center gap-2 flex-grow min-w-0 cursor-pointer hover:opacity-80 transition-opacity text-left"
+        >
+          <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-karma/40 flex-shrink-0">
+            <img src={activeSwapChat.otherUserAvatar} alt="" className="w-full h-full object-cover" />
+          </div>
 
-        <div className="flex-grow min-w-0">
-          <p className="font-bold text-sm text-ink truncate">{activeSwapChat.otherUserName}</p>
-          <p className="text-[10px] text-ink/50 truncate flex items-center gap-1">
-            <BookOpen size={9} /> {activeSwapChat.bookTitle} takası
-          </p>
-        </div>
+          <div className="flex-grow min-w-0">
+            <p className="font-bold text-sm text-ink truncate">{activeSwapChat.otherUserName}</p>
+            <p className="text-[10px] text-ink/50 truncate flex items-center gap-1">
+              <BookOpen size={9} /> {activeSwapChat.bookTitle} takası
+            </p>
+          </div>
+        </button>
 
         {activeSwapChat.bookCover && (
           <div className="w-9 h-12 rounded-lg overflow-hidden bg-parchment-dark flex-shrink-0 shadow-md border border-ink/10">
@@ -296,11 +301,16 @@ export const SwapChat: React.FC = () => {
               className={`flex ${isMe ? 'justify-end' : 'justify-start'} items-end gap-2`}
             >
               {!isMe && (
-                <img
-                  src={activeSwapChat.otherUserAvatar}
-                  alt=""
-                  className="w-7 h-7 rounded-full object-cover flex-shrink-0 mb-0.5"
-                />
+                <button
+                  onClick={() => { useStore.getState().setViewedUser({ id: activeSwapChat.otherUserId, name: activeSwapChat.otherUserName, avatar: activeSwapChat.otherUserAvatar, karma: { physical: 0, intellectual: 0, social: 0, total: 0 } } as any); navigate(`/public-profile/${activeSwapChat.otherUserId}`); }}
+                  className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 mb-0.5 cursor-pointer hover:opacity-80 transition-opacity"
+                >
+                  <img
+                    src={activeSwapChat.otherUserAvatar}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                </button>
               )}
               <div
                 className={`max-w-[72%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${

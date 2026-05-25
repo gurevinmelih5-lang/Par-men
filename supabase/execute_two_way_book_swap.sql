@@ -32,6 +32,10 @@ BEGIN
     RAISE EXCEPTION 'Takas talebi bulunamadı.';
   END IF;
 
+  IF auth.uid() != v_owner_id THEN
+    RAISE EXCEPTION 'Unauthorized: Only the book owner can accept and execute a swap.';
+  END IF;
+
   -- 2. Alıcı (requester) profil bilgilerini al
   SELECT name, lat, lng 
   INTO v_requester_name, v_requester_lat, v_requester_lng

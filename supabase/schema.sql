@@ -28,8 +28,6 @@ CREATE TABLE public.books (
   progress INTEGER DEFAULT 0,
   owner_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   distance_km NUMERIC DEFAULT 0, -- Şimdilik statik tutuyoruz, gerçekte PostGIS ile hesaplanacak
-  time_capsule_message TEXT,
-  time_capsule_from TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
@@ -94,6 +92,13 @@ CREATE TABLE public.swap_requests (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
+-- Zaman Kapsülü (Time Capsule) - Gizli Veri
+CREATE TABLE public.book_capsules (
+  book_id UUID REFERENCES public.books(id) ON DELETE CASCADE PRIMARY KEY,
+  message TEXT NOT NULL,
+  from_name TEXT NOT NULL
+);
+
 -- ==========================================
 -- 2. Row Level Security (RLS) - Güvenlik Kuralları
 -- ==========================================
@@ -107,6 +112,7 @@ ALTER TABLE public.scriptum_replies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.scriptum_likes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.scriptum_duels ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.swap_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.book_capsules ENABLE ROW LEVEL SECURITY;
 
 -- Profiller: Herkes herkesin profilini okuyabilir (Read)
 CREATE POLICY "Profiles are viewable by everyone" ON public.profiles FOR SELECT USING (true);
@@ -119,6 +125,26 @@ CREATE POLICY "Books are viewable by everyone" ON public.books FOR SELECT USING 
 CREATE POLICY "Users can insert own books" ON public.books FOR INSERT WITH CHECK (auth.uid() = owner_id);
 CREATE POLICY "Users can update own books" ON public.books FOR UPDATE USING (auth.uid() = owner_id);
 CREATE POLICY "Users can delete own books" ON public.books FOR DELETE USING (auth.uid() = owner_id);
+
+-- Book Capsules: Sadece kitap sahibi %100 okuma ilerlemesine ulaştığında okuyabilir
+CREATE POLICY "Capsules viewable by owner at 100 progress" ON public.book_capsules 
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.books b 
+      WHERE b.id = book_id 
+      AND b.owner_id = auth.uid() 
+      AND b.progress >= 100
+    )
+  );
+-- Sadece kitabın anlık sahibi kapsül ekleyebilir
+CREATE POLICY "Users can insert own capsules" ON public.book_capsules 
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.books b 
+      WHERE b.id = book_id 
+      AND b.owner_id = auth.uid()
+    )
+  );
 
 -- Lineage: Herkes okuyabilir
 CREATE POLICY "Lineage is viewable by everyone" ON public.book_lineage FOR SELECT USING (true);
@@ -148,7 +174,7 @@ CREATE POLICY "Users can manage own duels" ON public.scriptum_duels FOR ALL USIN
 -- Swap Requests (Takas Talepleri)
 CREATE POLICY "Swap requests viewable by parties" ON public.swap_requests FOR SELECT USING (auth.uid() = requester_id OR auth.uid() = owner_id);
 CREATE POLICY "Users can create swap requests" ON public.swap_requests FOR INSERT WITH CHECK (auth.uid() = requester_id);
-CREATE POLICY "Users can update requests" ON public.swap_requests FOR UPDATE USING (auth.uid() = owner_id OR auth.uid() = requester_id);
+CREATE POLICY "Users can update requests" ON public.swap_requests FOR UPDATE USING (auth.uid() = owner_id);
 
 -- ==========================================
 -- 3. Otomatik Kullanıcı Profili Oluşturma (Trigger)

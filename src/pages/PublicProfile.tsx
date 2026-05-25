@@ -3,16 +3,18 @@ import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
 import { ChevronLeft, MapPin, Award, BookOpen, Check } from 'lucide-react';
 import { translateCondition } from '../lib/translations';
+import { useNavigate } from 'react-router-dom';
 
 export const PublicProfile: React.FC = () => {
-  const { viewedUser, books, setActiveTab, goBack, requestSwap, requestedSwaps } = useStore();
+  const { viewedUser, books, requestSwap, requestedSwaps } = useStore();
+  const navigate = useNavigate();
 
   if (!viewedUser) {
     return (
       <div className="min-h-screen bg-parchment-light flex flex-col items-center justify-center p-6 text-center">
         <h2 className="font-serif text-2xl text-ink mb-2">Kullanıcı Bulunamadı</h2>
         <button 
-          onClick={() => setActiveTab('discovery')}
+          onClick={() => navigate('/discovery')}
           className="bg-ink text-parchment-light px-6 py-2 rounded-full font-medium mt-4"
         >
           Geri Dön
@@ -46,7 +48,7 @@ export const PublicProfile: React.FC = () => {
     >
       <header className="p-4 flex items-center justify-between relative z-10">
         <button 
-          onClick={() => goBack()}
+          onClick={() => navigate(-1)}
           className="p-2 bg-white rounded-full shadow-sm text-ink/60 active:text-ink transition-colors tap-target"
         >
           <ChevronLeft size={24} />
@@ -57,9 +59,14 @@ export const PublicProfile: React.FC = () => {
         {/* Profile Header */}
         <motion.div variants={item} className="flex flex-col items-center text-center mb-8">
           <div className="relative mb-4">
-            <div className={`w-28 h-28 rounded-full overflow-hidden border-4 ${isGold ? 'border-karma shadow-[0_0_15px_rgba(212,175,55,0.5)]' : 'border-white shadow-md'}`}>
+            <motion.div 
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+              className={`w-28 h-28 rounded-full overflow-hidden border-4 ${isGold ? 'border-karma shadow-[0_0_15px_rgba(212,175,55,0.5)]' : 'border-white shadow-md'}`}
+            >
                <img src={viewedUser.avatar || "https://i.pravatar.cc/150"} alt={viewedUser.name} className="w-full h-full object-cover" />
-            </div>
+            </motion.div>
             {isGold && (
               <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-karma to-yellow-600 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-sm whitespace-nowrap">
                 Mühürlü Okur

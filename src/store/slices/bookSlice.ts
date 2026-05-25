@@ -40,7 +40,7 @@ export interface BookSlice {
   fetchIncomingRequests: () => Promise<void>;
   fetchOpenSwapChats: () => Promise<void>;
   fetchSwapChatPayload: (swapRequestId: string) => Promise<SwapChat | null>;
-  openSwapChatById: (swapRequestId: string, opts?: { goToChatTab?: boolean }) => Promise<void>;
+  openSwapChatById: (swapRequestId: string) => Promise<void>;
   endSwapChat: (swapRequestId: string) => Promise<void>;
   respondToSwapRequest: (requestId: string, accept: boolean, offeredBookId?: string) => Promise<void>;
   updateReadingProgress: (bookId: string, progress: number, totalPages: number, currentPage: number) => Promise<void>;
@@ -83,9 +83,9 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
       currentPage: dbBook.current_page || undefined,
       lat: ownerLat || undefined,
       lng: ownerLng || undefined,
-      timeCapsule: dbBook.time_capsule_message ? {
-        message: dbBook.time_capsule_message,
-        from: dbBook.time_capsule_from || 'Anonim'
+      timeCapsule: (dbBook.book_capsules && dbBook.book_capsules.length > 0) ? {
+        message: dbBook.book_capsules[0].message,
+        from: dbBook.book_capsules[0].from_name
       } : undefined
     };
   },
@@ -106,13 +106,24 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
         depth: bookData.depth || 'Medium',
         owner_id: user.id,
         lat: user.lat,
-        lng: user.lng,
-        time_capsule_message: bookData.timeCapsule?.message || null,
-        time_capsule_from: bookData.timeCapsule?.message ? user.name : null
+        lng: user.lng
       }).select('*, book_lineage(*)').single();
 
       if (error) throw error;
       if (data) {
+        if (bookData.timeCapsule?.message) {
+          await supabase.from('book_capsules').insert({
+            book_id: data.id,
+            message: bookData.timeCapsule.message,
+            from_name: user.name
+          });
+          // Mutate the returned data object to include the capsule so it maps correctly
+          (data as any).book_capsules = [{
+            book_id: data.id,
+            message: bookData.timeCapsule.message,
+            from_name: user.name
+          }];
+        }
         set((state) => ({ books: [...state.books, get().mapDBBookToState(data as DBBook, user.lat, user.lng)] }));
         toast.success('Kitap kütüphanene eklendi!', { id: 'addBook' });
       }
@@ -377,12 +388,11 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
     }
   },
 
-  openSwapChatById: async (swapRequestId, opts) => {
+  openSwapChatById: async (swapRequestId) => {
     const payload = await get().fetchSwapChatPayload(swapRequestId);
     const ui = get() as any;
     if (payload) {
       ui.setActiveSwapChat(payload);
-      if (opts?.goToChatTab) ui.setActiveTab('chat');
     }
     await get().fetchOpenSwapChats();
   },
@@ -394,7 +404,6 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
       const ui = get() as any;
       if (ui.activeSwapChat?.swapId === swapRequestId) {
         ui.setActiveSwapChat(null);
-        ui.setActiveTab('profile');
       }
       await get().fetchOpenSwapChats();
       toast.success('Sohbet sonlandırıldı.');
@@ -464,7 +473,7 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
           requestedSwaps: state.requestedSwaps.filter(id => id !== req.bookId)
         }));
 
-        await get().openSwapChatById(requestId, { goToChatTab: true });
+        await get().openSwapChatById(requestId);
 
         // Tüm verileri yenile (böylece kütüphanelerdeki yer değişimi ve yeni lineage kayıtları yansır)
         const rootStore = get() as any;

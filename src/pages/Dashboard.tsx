@@ -5,8 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getCurrentLocation } from '../lib/location';
 import toast from 'react-hot-toast';
 
+import { useNavigate } from 'react-router-dom';
+
 export const Dashboard: React.FC = () => {
-  const { user, books, scriptums, setActiveTab, requestSwap, requestedSwaps, updateReadingProgress, updateLocation, setSelectedBook } = useStore();
+  const { user, books, scriptums, requestSwap, requestedSwaps, updateReadingProgress, updateLocation } = useStore();
+  const navigate = useNavigate();
   const [isEditingProgress, setIsEditingProgress] = useState(false);
   const [tempTotalPages, setTempTotalPages] = useState<number | string>('');
   const [tempCurrentPage, setTempCurrentPage] = useState<number | string>('');
@@ -32,14 +35,7 @@ export const Dashboard: React.FC = () => {
   const nearBooks = books.filter(b => b.ownerId !== user?.id).sort((a, b) => a.distance - b.distance);
   
   // Find currently reading book (first book owned by user)
-  const currentBook = books.find(b => b.ownerId === user?.id) || { 
-    id: 'b1', 
-    title: 'Körlük', 
-    author: 'José Saramago', 
-    progress: 45,
-    totalPages: 320,
-    currentPage: 144
-  };
+  const currentBook = books.find(b => b.ownerId === user?.id);
   
   const totalNum = Number(tempTotalPages) || 0;
   const currentNum = Number(tempCurrentPage) || 0;
@@ -101,109 +97,125 @@ export const Dashboard: React.FC = () => {
         </p>
       </motion.header>
 
-      {/* Progress Bar */}
-      <motion.section variants={item} className="bg-parchment p-5 rounded-2xl shadow-sm border border-ink/5 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-karma/5 rounded-bl-full -mr-10 -mt-10" />
-        <div className="flex justify-between items-center mb-4 relative z-10">
-          <h2 className="font-serif text-xl flex items-center gap-2">
-            <BookOpen size={20} className="text-karma" />
-            Okuma İlerlemen
-          </h2>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-karma">
-              {isEditingProgress ? `${calculatedPercent}%` : `${currentBook.progress || 0}%`}
-            </span>
-            {!isEditingProgress ? (
-              <button 
-                onClick={() => { 
-                  setIsEditingProgress(true); 
-                  setTempTotalPages(currentBook.totalPages || ''); 
-                  setTempCurrentPage(currentBook.currentPage || ''); 
-                }} 
-                className="w-10 h-10 flex items-center justify-center text-ink/40 hover:text-ink transition-colors bg-ink/5 rounded-full"
-              >
-                <Edit2 size={16} />
-              </button>
-            ) : (
-              <div className="flex items-center gap-1">
+      {/* Progress Bar or Empty State */}
+      {currentBook ? (
+        <motion.section variants={item} className="bg-parchment p-5 rounded-2xl shadow-sm border border-ink/5 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-karma/5 rounded-bl-full -mr-10 -mt-10" />
+          <div className="flex justify-between items-center mb-4 relative z-10">
+            <h2 className="font-serif text-xl flex items-center gap-2">
+              <BookOpen size={20} className="text-karma" />
+              Okuma İlerlemen
+            </h2>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-karma">
+                {isEditingProgress ? `${calculatedPercent}%` : `${currentBook.progress || 0}%`}
+              </span>
+              {!isEditingProgress ? (
                 <button 
-                  onClick={handleSaveProgress} 
-                  className="w-10 h-10 flex items-center justify-center text-green-600 hover:text-green-700 bg-green-50 rounded-full transition-colors"
+                  onClick={() => { 
+                    setIsEditingProgress(true); 
+                    setTempTotalPages(currentBook.totalPages || ''); 
+                    setTempCurrentPage(currentBook.currentPage || ''); 
+                  }} 
+                  className="w-10 h-10 flex items-center justify-center text-ink/40 hover:text-ink transition-colors bg-ink/5 rounded-full"
                 >
-                  <Check size={20} />
+                  <Edit2 size={16} />
                 </button>
-                <button 
-                  onClick={() => setIsEditingProgress(false)} 
-                  className="w-10 h-10 flex items-center justify-center text-red-400 hover:text-red-500 bg-red-50 rounded-full transition-colors"
-                >
-                  <X size={20} />
-                </button>
+              ) : (
+                <div className="flex items-center gap-1">
+                  <button 
+                    onClick={handleSaveProgress} 
+                    className="w-10 h-10 flex items-center justify-center text-green-600 hover:text-green-700 bg-green-50 rounded-full transition-colors"
+                  >
+                    <Check size={20} />
+                  </button>
+                  <button 
+                    onClick={() => setIsEditingProgress(false)} 
+                    className="w-10 h-10 flex items-center justify-center text-red-400 hover:text-red-500 bg-red-50 rounded-full transition-colors"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {isEditingProgress ? (
+            <div className="flex gap-4 mb-4 relative z-10 py-1">
+              <div className="flex-1">
+                <label className="block text-[10px] font-bold text-ink/40 uppercase tracking-wider mb-1">Kaldığın Sayfa</label>
+                <input 
+                  type="number"
+                  min="0"
+                  value={tempCurrentPage}
+                  onChange={(e) => setTempCurrentPage(e.target.value === '' ? '' : parseInt(e.target.value))}
+                  placeholder="Örn: 144"
+                  className="w-full bg-white border border-ink/10 py-2 px-3 rounded-xl text-ink font-medium text-base focus:outline-none focus:border-karma transition-all"
+                />
               </div>
-            )}
-          </div>
-        </div>
-        
-        {isEditingProgress ? (
-          <div className="flex gap-4 mb-4 relative z-10 py-1">
-            <div className="flex-1">
-              <label className="block text-[10px] font-bold text-ink/40 uppercase tracking-wider mb-1">Kaldığın Sayfa</label>
-              <input 
-                type="number"
-                min="0"
-                value={tempCurrentPage}
-                onChange={(e) => setTempCurrentPage(e.target.value === '' ? '' : parseInt(e.target.value))}
-                placeholder="Örn: 144"
-                className="w-full bg-white border border-ink/10 py-2 px-3 rounded-xl text-ink font-medium text-base focus:outline-none focus:border-karma transition-all"
+              <div className="flex-1">
+                <label className="block text-[10px] font-bold text-ink/40 uppercase tracking-wider mb-1">Toplam Sayfa</label>
+                <input 
+                  type="number"
+                  min="1"
+                  value={tempTotalPages}
+                  onChange={(e) => setTempTotalPages(e.target.value === '' ? '' : parseInt(e.target.value))}
+                  placeholder="Örn: 320"
+                  className="w-full bg-white border border-ink/10 py-2 px-3 rounded-xl text-ink font-medium text-base focus:outline-none focus:border-karma transition-all"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="w-full bg-parchment-dark/50 rounded-full h-2 mb-3 overflow-hidden relative z-10">
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${currentBook.progress || 0}%` }}
+                transition={{ duration: 1, delay: 0.2 }}
+                className="bg-karma h-full rounded-full" 
               />
             </div>
-            <div className="flex-1">
-              <label className="block text-[10px] font-bold text-ink/40 uppercase tracking-wider mb-1">Toplam Sayfa</label>
-              <input 
-                type="number"
-                min="1"
-                value={tempTotalPages}
-                onChange={(e) => setTempTotalPages(e.target.value === '' ? '' : parseInt(e.target.value))}
-                placeholder="Örn: 320"
-                className="w-full bg-white border border-ink/10 py-2 px-3 rounded-xl text-ink font-medium text-base focus:outline-none focus:border-karma transition-all"
-              />
+          )}
+          <div className="flex items-center justify-between relative z-10">
+            <div className="flex flex-col">
+              <p className="text-xs text-ink/60 font-medium">{currentBook.title} — {currentBook.author}</p>
+              {!isEditingProgress && currentBook.currentPage != null && currentBook.totalPages != null && (
+                <p className="text-[10px] text-ink/40 font-medium mt-0.5">
+                  {currentBook.currentPage} / {currentBook.totalPages} sayfa okundu
+                </p>
+              )}
             </div>
+            <p className="text-[10px] text-karma font-bold">
+              {(isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) === 0 && 'Henüz başlamadın...'}
+              {(isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) > 0 && (isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) < 25 && '🌱 Yeni başladın!'}
+              {(isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) >= 25 && (isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) < 50 && '📖 Yarı yoldasın!'}
+              {(isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) >= 50 && (isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) < 80 && '🔥 Harika gidiyorsun!'}
+              {(isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) >= 80 && (isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) < 100 && '⚡ Neredeyse bitti!'}
+              {(isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) === 100 && '🏆 Tebrikler! Bitirdin!'}
+            </p>
           </div>
-        ) : (
-          <div className="w-full bg-parchment-dark/50 rounded-full h-2 mb-3 overflow-hidden relative z-10">
-            <motion.div 
-              initial={{ width: 0 }}
-              animate={{ width: `${currentBook.progress || 0}%` }}
-              transition={{ duration: 1, delay: 0.2 }}
-              className="bg-karma h-full rounded-full" 
-            />
+        </motion.section>
+      ) : (
+        <motion.section variants={item} className="bg-parchment/60 p-6 rounded-2xl border border-dashed border-ink/20 flex flex-col items-center justify-center text-center relative overflow-hidden">
+          <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-3 text-ink/30 shadow-sm">
+            <BookOpen size={24} />
           </div>
-        )}
-        <div className="flex items-center justify-between relative z-10">
-          <div className="flex flex-col">
-            <p className="text-xs text-ink/60 font-medium">{currentBook.title} — {currentBook.author}</p>
-            {!isEditingProgress && currentBook.currentPage != null && currentBook.totalPages != null && (
-              <p className="text-[10px] text-ink/40 font-medium mt-0.5">
-                {currentBook.currentPage} / {currentBook.totalPages} sayfa okundu
-              </p>
-            )}
-          </div>
-          <p className="text-[10px] text-karma font-bold">
-            {(isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) === 0 && 'Henüz başlamadın...'}
-            {(isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) > 0 && (isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) < 25 && '🌱 Yeni başladın!'}
-            {(isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) >= 25 && (isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) < 50 && '📖 Yarı yoldasın!'}
-            {(isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) >= 50 && (isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) < 80 && '🔥 Harika gidiyorsun!'}
-            {(isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) >= 80 && (isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) < 100 && '⚡ Neredeyse bitti!'}
-            {(isEditingProgress ? calculatedPercent : (currentBook.progress || 0)) === 100 && '🏆 Tebrikler! Bitirdin!'}
-          </p>
-        </div>
-      </motion.section>
+          <h3 className="font-serif font-bold text-lg mb-1">Kütüphanen Boş</h3>
+          <p className="text-sm text-ink/60 mb-4">Okumakta olduğun bir kitap ekle ve ilerlemeni takip et.</p>
+          <button 
+            onClick={() => navigate('/profile')}
+            className="bg-karma text-white px-5 py-2.5 rounded-full text-sm font-bold shadow-sm hover:bg-karma/90 transition-colors"
+          >
+            Kitap Ekle
+          </button>
+        </motion.section>
+      )}
 
       {/* Near Swap Opportunities */}
       <motion.section variants={item} className="space-y-4">
         <div className="flex justify-between items-end">
           <h2 className="font-serif text-xl">Yakınındaki Fırsatlar</h2>
           <span 
-            onClick={() => setActiveTab('discovery')} 
+            onClick={() => navigate('/discovery')}
             className="text-xs text-karma font-medium cursor-pointer hover:text-karma/80 transition-colors"
           >
             Tümünü Gör
@@ -218,7 +230,7 @@ export const Dashboard: React.FC = () => {
             >
               <div 
                 className="relative h-32 mb-3 rounded-lg overflow-hidden bg-parchment-dark cursor-pointer group"
-                onClick={() => { setSelectedBook(book.id); setActiveTab('bookDetail'); }}
+                onClick={() => navigate(`/book/${book.id}`)}
               >
                 <img src={book.cover} alt={book.title} className="w-full h-full object-cover opacity-90 transition-transform duration-500 group-hover:scale-105" />
                 <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 text-ink shadow-sm">
@@ -269,12 +281,15 @@ export const Dashboard: React.FC = () => {
             "{dailyScriptum.content}"
           </p>
           <div className="mt-6 flex items-center justify-between relative z-10">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-parchment-dark overflow-hidden border border-parchment-light/20">
+            <button 
+              className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity text-left"
+              onClick={() => { useStore.getState().setViewedUser({ id: dailyScriptum.userId, name: dailyScriptum.userName, avatar: dailyScriptum.userAvatar, karma: { physical: 0, intellectual: 0, social: 0, total: 0 } } as any); navigate(`/public-profile/${dailyScriptum.userId}`); }}
+            >
+              <div className="w-8 h-8 rounded-full bg-parchment-dark overflow-hidden border border-parchment-light/20 flex-shrink-0">
                  <img src={dailyScriptum.userAvatar || "https://i.pravatar.cc/150"} alt="User Avatar" className="w-full h-full object-cover" />
               </div>
               <p className="text-xs text-parchment-light/70">— {dailyScriptum.userName}</p>
-            </div>
+            </button>
             <span className="text-[10px] bg-white/10 px-3 py-1 rounded-full text-parchment-light/80">{dailyScriptum.likes} Beğeni</span>
           </div>
         </motion.section>

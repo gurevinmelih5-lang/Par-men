@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Book, ShieldCheck, Check } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import type { Book as BookType } from '../types/models';
 import { supabase } from '../lib/supabase';
@@ -14,7 +15,8 @@ interface SwapTableModalProps {
 }
 
 export const SwapTableModal: React.FC<SwapTableModalProps> = ({ isOpen, onClose, request }) => {
-  const { books, respondToSwapRequest, setViewedUser, setActiveTab } = useStore();
+  const navigate = useNavigate();
+  const { books, respondToSwapRequest, setViewedUser } = useStore();
   const [requesterBooks, setRequesterBooks] = useState<BookType[]>([]);
   const [offeredBookId, setOfferedBookId] = useState<string>('');
   const [loadingBooks, setLoadingBooks] = useState(false);
@@ -96,7 +98,7 @@ export const SwapTableModal: React.FC<SwapTableModalProps> = ({ isOpen, onClose,
                 <button 
                   onClick={() => {
                      setViewedUser({ id: request.requesterId, name: request.requesterName, avatar: request.requesterAvatar, karma: { physical: 70, intellectual: 70, social: 70, total: 70 } } as any);
-                     setActiveTab('publicProfile');
+                     navigate(`/public-profile/${requesterProfile?.id}`);
                      onClose();
                   }}
                   className="font-bold underline hover:text-white transition-colors cursor-pointer"
