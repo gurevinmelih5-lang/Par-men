@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, BookOpen, Upload, Search, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { supabase } from '../lib/supabase';
 import { compressImage } from '../lib/image';
 import { moderateImage } from '../lib/moderation';
 import toast from 'react-hot-toast';
@@ -16,7 +15,16 @@ interface AddBookModalProps {
 export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) => {
   const { addBook } = useStore();
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    title: string;
+    author: string;
+    cover: string;
+    genre: string;
+    condition: 'Mint' | 'Good' | 'Fair' | 'Poor';
+    pace: 'Slow' | 'Medium' | 'Fast';
+    depth: 'Low' | 'Medium' | 'High';
+    timeCapsule: string;
+  }>({
     title: '',
     author: '',
     cover: '',
@@ -383,7 +391,7 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
                     <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">Durum</label>
                     <select
                       value={formData.condition}
-                      onChange={e => setFormData({ ...formData, condition: e.target.value })}
+                      onChange={e => setFormData({ ...formData, condition: e.target.value as 'Mint' | 'Good' | 'Fair' | 'Poor' })}
                       className="w-full bg-white border border-ink/10 py-3 px-3 rounded-xl text-ink font-medium focus:outline-none focus:border-karma transition-all text-sm"
                     >
                       <option value="Mint">Mükemmel</option>
@@ -396,7 +404,7 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
                     <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">Tempo</label>
                     <select
                       value={formData.pace}
-                      onChange={e => setFormData({ ...formData, pace: e.target.value })}
+                      onChange={e => setFormData({ ...formData, pace: e.target.value as 'Slow' | 'Medium' | 'Fast' })}
                       className="w-full bg-white border border-ink/10 py-3 px-3 rounded-xl text-ink font-medium focus:outline-none focus:border-karma transition-all text-sm"
                     >
                       <option value="Slow">Yavaş</option>

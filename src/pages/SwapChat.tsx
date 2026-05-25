@@ -119,7 +119,7 @@ export const SwapChat: React.FC = () => {
         (payload) => {
           const row = payload.new as { chat_ended_by?: string | null };
           if (row.chat_ended_by) {
-            void useStore.getState().openSwapChatById(swapId, { goToChatTab: false });
+            void useStore.getState().openSwapChatById(swapId);
           }
         }
       )

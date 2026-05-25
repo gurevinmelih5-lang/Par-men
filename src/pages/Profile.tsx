@@ -8,7 +8,6 @@ import { EditBookModal } from '../components/EditBookModal';
 import { UserManual } from '../components/UserManual';
 import { SwapTableModal } from '../components/SwapTableModal';
 import { getCurrentLocation } from '../lib/location';
-import imageCompression from 'browser-image-compression';
 import { supabase } from '../lib/supabase';
 import { compressImage } from '../lib/image';
 import toast from 'react-hot-toast';
@@ -171,7 +170,7 @@ export const Profile: React.FC = () => {
               initial={{ scale: 0.5, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-              className={`relative w-28 h-28 rounded-full border-4 mb-4 ${isGold ? 'border-karma shadow-[0_0_15px_rgba(212,175,55,0.5)]' : 'border-white shadow-md'}`}
+              className={`relative w-28 h-28 rounded-full border-4 mb-4 ${theme === 'gold' ? 'border-karma shadow-[0_0_15px_rgba(212,175,55,0.5)]' : 'border-white shadow-md'}`}
             >
               <div className="w-full h-full rounded-full overflow-hidden bg-parchment-dark group">
                 <img src={user.avatar} alt={user.name} className={`w-full h-full object-cover transition-opacity ${isUploadingAvatar ? 'opacity-50' : 'group-hover:opacity-80'}`} />

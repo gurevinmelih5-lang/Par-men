@@ -98,7 +98,7 @@ export const SwapTableModal: React.FC<SwapTableModalProps> = ({ isOpen, onClose,
                 <button 
                   onClick={() => {
                      setViewedUser({ id: request.requesterId, name: request.requesterName, avatar: request.requesterAvatar, karma: { physical: 70, intellectual: 70, social: 70, total: 70 } } as any);
-                     navigate(`/public-profile/${requesterProfile?.id}`);
+                     navigate(`/public-profile/${request.requesterId}`);
                      onClose();
                   }}
                   className="font-bold underline hover:text-white transition-colors cursor-pointer"
