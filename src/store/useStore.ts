@@ -8,9 +8,11 @@ import { createBookSlice } from './slices/bookSlice';
 import type { BookSlice } from './slices/bookSlice';
 import { createSocialSlice } from './slices/socialSlice';
 import type { SocialSlice } from './slices/socialSlice';
+import { createRoomSlice } from './slices/roomSlice';
+import type { RoomSlice } from './slices/roomSlice';
 import type { DBProfile, DBBook, DBScriptum } from '../types/database.types';
 
-export type StoreState = UISlice & UserSlice & BookSlice & SocialSlice & {
+export type StoreState = UISlice & UserSlice & BookSlice & SocialSlice & RoomSlice & {
   fetchInitialData: () => Promise<void>;
 };
 
@@ -19,6 +21,7 @@ export const useStore = create<StoreState>()((...a) => ({
   ...createUserSlice(...a),
   ...createBookSlice(...a),
   ...createSocialSlice(...a),
+  ...createRoomSlice(...a),
   
   fetchInitialData: async () => {
     const set = a[0];
@@ -76,6 +79,9 @@ export const useStore = create<StoreState>()((...a) => ({
       // 4. Fetch Incoming Swap Requests
       await get().fetchIncomingRequests();
       await get().fetchOpenSwapChats();
+      
+      // 5. Load Rooms
+      get().loadRooms();
 
     } catch (error) {
       console.error("Error fetching initial data from Supabase:", error);

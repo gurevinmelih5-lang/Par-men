@@ -100,9 +100,25 @@ export interface Scriptum {
   replies?: ScriptumReply[];
 }
 
+export interface RoomMessage {
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  content: string;
+  timestamp: string;
+}
+
+export interface RoomParticipant {
+  id: string;
+  name: string;
+  avatar: string;
+}
+
 export interface Room {
   id: string;
   title: string;
+  hostId: string;
   hostName: string;
   hostAvatar: string;
   participants: number;
@@ -110,4 +126,6 @@ export interface Room {
   time: string;
   isLive: boolean;
   type: 'Sessiz Okuma' | 'Felsefe Tartışması' | 'Gece Okuması';
+  participantsList: RoomParticipant[];
+  messages: RoomMessage[];
 }

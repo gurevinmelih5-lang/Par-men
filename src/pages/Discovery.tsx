@@ -13,17 +13,15 @@ import { useNavigate } from 'react-router-dom';
 const ROOM_CREATION_KARMA_THRESHOLD = 75;
 
 export const Discovery: React.FC = () => {
-  const { books, user, searchUsers, setViewedUser } = useStore();
+  const { books, user, searchUsers, setViewedUser, rooms, createRoom, joinRoom } = useStore();
   const navigate = useNavigate();
   const [tempo, setTempo] = useState<number>(50);
   const [depth, setDepth] = useState<number>(50);
   const [searchTab, setSearchTab] = useState<'books' | 'users' | 'rooms'>('books');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
-  const [rooms, setRooms] = useState<Room[]>([]);
   const [showCreateRoom, setShowCreateRoom] = useState(false);
   const [newRoom, setNewRoom] = useState({ title: '', type: 'Sessiz Okuma' as Room['type'], time: '', maxParticipants: 20 });
-  const [joinedRooms, setJoinedRooms] = useState<Set<string>>(new Set());
 
   // Debounced user search
   useEffect(() => {
@@ -71,18 +69,16 @@ export const Discovery: React.FC = () => {
       toast.error('Oda adı boş bırakılamaz.');
       return;
     }
-    const created: Room = {
-      id: `room_${Date.now()}`,
+    createRoom({
       title: newRoom.title,
+      hostId: user.id,
       hostName: user.name,
       hostAvatar: user.avatar,
-      participants: 1,
       maxParticipants: newRoom.maxParticipants,
       time: newRoom.time || 'Şu an',
       isLive: !newRoom.time,
       type: newRoom.type,
-    };
-    setRooms(prev => [created, ...prev]);
+    });
     setShowCreateRoom(false);
     setNewRoom({ title: '', type: 'Sessiz Okuma', time: '', maxParticipants: 20 });
     toast.success('Odanız başarıyla oluşturuldu!');
@@ -343,30 +339,26 @@ export const Discovery: React.FC = () => {
                       </div>
                       <button
                         className={`text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all active:scale-95 flex items-center gap-1 flex-shrink-0 ${
-                          room.participants >= room.maxParticipants
+                          room.hostId === user.id || room.participantsList?.some(p => p.id === user.id)
+                            ? 'bg-karma text-ink shadow-karma/30 shadow-md'
+                            : room.participants >= room.maxParticipants
                             ? 'bg-ink/20 text-ink/40 cursor-not-allowed'
                             : room.isLive
                             ? 'bg-karma text-ink shadow-karma/30 shadow-md'
                             : 'bg-ink text-parchment-light'
                         }`}
-                        disabled={room.participants >= room.maxParticipants}
+                        disabled={room.participants >= room.maxParticipants && room.hostId !== user.id && !room.participantsList?.some(p => p.id === user.id)}
                         onClick={() => {
-                          if (joinedRooms.has(room.id)) {
-                            toast('Bu etkinliğe zaten katıldınız.', { icon: 'ℹ️' });
-                            return;
-                          }
-                          if (room.participants < room.maxParticipants) {
-                            setJoinedRooms(prev => {
-                              const newSet = new Set(prev);
-                              newSet.add(room.id);
-                              return newSet;
-                            });
-                            setRooms(prev => prev.map(r => r.id === room.id ? { ...r, participants: r.participants + 1 } : r));
-                            toast.success(`"${room.title}" odasına katıldınız! Etkinlik: ${room.time}`);
+                          if (room.hostId === user.id || room.participantsList?.some(p => p.id === user.id)) {
+                            navigate(`/room/${room.id}`);
+                          } else if (room.participants < room.maxParticipants) {
+                            joinRoom(room.id, { id: user.id, name: user.name, avatar: user.avatar });
+                            toast.success(`"${room.title}" odasına katıldınız!`);
+                            navigate(`/room/${room.id}`);
                           }
                         }}
                       >
-                        {joinedRooms.has(room.id) ? <><Lock size={10} /> Katıldın</> : room.participants >= room.maxParticipants ? <><Lock size={10} /> Dolu</> : room.isLive ? 'Katıl' : 'Kaydol'}
+                        {room.hostId === user.id || room.participantsList?.some(p => p.id === user.id) ? 'Odaya Git' : room.participants >= room.maxParticipants ? <><Lock size={10} /> Dolu</> : room.isLive ? 'Katıl' : 'Kaydol'}
                       </button>
                     </div>
                     <div className="mt-2 h-1.5 rounded-full bg-ink/10 overflow-hidden">

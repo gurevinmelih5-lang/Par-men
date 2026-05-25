@@ -9,6 +9,7 @@ import { Profile } from './pages/Profile';
 import { BookDetail } from './pages/BookDetail';
 import { PublicProfile } from './pages/PublicProfile';
 import { SwapChat } from './pages/SwapChat';
+import { RoomPanel } from './pages/RoomPanel';
 import { Auth } from './pages/Auth';
 import { UpdatePasswordForm } from './components/UpdatePasswordForm';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -123,6 +124,24 @@ function App() {
                   className="h-full"
                 >
                   <SwapChat />
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </div>
+        } />
+        <Route path="/room/:id" element={
+          <div className="flex justify-center bg-[#F5F0E6] min-h-[100dvh]">
+            <div className="w-full max-w-5xl bg-parchment-light relative shadow-2xl overflow-x-hidden" style={{ height: '100dvh' }}>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={location.pathname}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15, ease: 'easeInOut' }}
+                  className="h-full"
+                >
+                  <RoomPanel />
                 </motion.div>
               </AnimatePresence>
             </div>
