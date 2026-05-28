@@ -15,21 +15,20 @@ export interface SwapChat {
 }
 
 export interface UISlice {
-  theme: 'light' | 'dark' | 'gold' | 'gold-dark';
+  theme: 'light';
   selectedBookId: string | null;
   activeSwapChat: SwapChat | null;
-  setTheme: (theme: 'light' | 'dark' | 'gold' | 'gold-dark') => void;
+  setTheme: (theme: 'light') => void;
   setSelectedBook: (id: string | null) => void;
   setActiveSwapChat: (chat: SwapChat | null) => void;
 }
 
 export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
-  theme: (localStorage.getItem('parsomen_theme') as any) || 'light',
+  theme: 'light',
   selectedBookId: null,
   activeSwapChat: null,
-  setTheme: (theme) => {
-    localStorage.setItem('parsomen_theme', theme);
-    set({ theme });
+  setTheme: () => {
+    set({ theme: 'light' });
   },
   setSelectedBook: (id) => set({ selectedBookId: id }),
   setActiveSwapChat: (chat) => set({ activeSwapChat: chat }),

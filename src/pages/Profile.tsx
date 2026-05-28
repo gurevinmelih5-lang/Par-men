@@ -15,7 +15,7 @@ import { translateCondition } from '../lib/translations';
 import { useNavigate } from 'react-router-dom';
 
 export const Profile: React.FC = () => {
-  const { user, books, incomingRequests, respondToSwapRequest, deleteBook, updateLocation, theme, setTheme, requestedSwaps, setViewedUser, openSwapChats, openSwapChatById, setActiveSwapChat, deleteAccount } = useStore();
+  const { user, books, incomingRequests, respondToSwapRequest, deleteBook, updateLocation, requestedSwaps, setViewedUser, openSwapChats, openSwapChatById, setActiveSwapChat, deleteAccount } = useStore();
   const navigate = useNavigate();
   const [cancelledSwaps, setCancelledSwaps] = React.useState<string[]>([]);
   const [accountEmail, setAccountEmail] = React.useState<string | null>(null);
@@ -40,11 +40,7 @@ export const Profile: React.FC = () => {
     });
   }, []);
 
-  React.useEffect(() => {
-    if (user.karma.total < 100 && (theme === 'gold' || theme === 'gold-dark')) {
-      setTheme('light');
-    }
-  }, [user.karma.total, theme, setTheme]);
+
 
   const handleLogout = async () => {
     toast((t) => (
@@ -173,7 +169,7 @@ export const Profile: React.FC = () => {
               initial={{ scale: 0.5, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-              className={`relative w-28 h-28 rounded-full border-4 mb-4 ${theme === 'gold' ? 'border-karma shadow-[0_0_15px_rgba(212,175,55,0.5)]' : 'border-white shadow-md'}`}
+              className="relative w-28 h-28 rounded-full border-4 mb-4 border-white shadow-md"
             >
               <div className="w-full h-full rounded-full overflow-hidden bg-parchment-dark group">
                 <img src={user.avatar} alt={user.name} className={`w-full h-full object-cover transition-opacity ${isUploadingAvatar ? 'opacity-50' : 'group-hover:opacity-80'}`} />
@@ -532,60 +528,7 @@ export const Profile: React.FC = () => {
         )}
       </motion.section>
 
-      {/* Görünüm & Tema Seçimi */}
-      <motion.section variants={item} className="space-y-3">
-        <h2 className="font-serif text-xl text-ink/90">Görünüm & Tema</h2>
-        <div className="bg-white rounded-2xl border border-ink/10 shadow-sm p-4 grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => setTheme('light')}
-            className={`p-3 rounded-xl border text-xs font-bold text-center transition-all ${
-              theme === 'light' 
-                ? 'bg-ink text-white border-ink' 
-                : 'bg-ink/5 text-ink border-ink/10 hover:bg-ink/10'
-            }`}
-          >
-            ☀️ Standart Açık
-          </button>
-          <button
-            type="button"
-            onClick={() => setTheme('dark')}
-            className={`p-3 rounded-xl border text-xs font-bold text-center transition-all ${
-              theme === 'dark' 
-                ? 'bg-ink text-white border-ink' 
-                : 'bg-ink/5 text-ink border-ink/10 hover:bg-ink/10'
-            }`}
-          >
-            🌙 Standart Koyu
-          </button>
-          <button
-            type="button"
-            disabled={user.karma.total < 100}
-            onClick={() => setTheme('gold')}
-            className={`p-3 rounded-xl border text-xs font-bold text-center transition-all flex flex-col items-center justify-center gap-1 ${
-              user.karma.total < 100 
-                ? 'bg-ink/5 text-ink/30 border-ink/5 cursor-not-allowed opacity-50' 
-                : (theme === 'gold' ? 'bg-karma text-ink border-karma shadow-md' : 'bg-karma/10 text-karma border-karma/30 hover:bg-karma/20')
-            }`}
-          >
-            <span>✨ Altın Açık</span>
-            {user.karma.total < 100 && <span className="text-[9px] font-sans font-medium text-ink/40">🔒 (100 Karma)</span>}
-          </button>
-          <button
-            type="button"
-            disabled={user.karma.total < 100}
-            onClick={() => setTheme('gold-dark')}
-            className={`p-3 rounded-xl border text-xs font-bold text-center transition-all flex flex-col items-center justify-center gap-1 ${
-              user.karma.total < 100 
-                ? 'bg-ink/5 text-ink/30 border-ink/5 cursor-not-allowed opacity-50' 
-                : (theme === 'gold-dark' ? 'bg-karma text-ink border-karma shadow-md' : 'bg-karma/10 text-karma border-karma/30 hover:bg-karma/20')
-            }`}
-          >
-            <span>🏆 Altın Koyu</span>
-            {user.karma.total < 100 && <span className="text-[9px] font-sans font-medium text-ink/40">🔒 (100 Karma)</span>}
-          </button>
-        </div>
-      </motion.section>
+
 
       <motion.section variants={item} className="space-y-3">
         <h2 className="font-serif text-xl text-ink/90">Hesap</h2>
