@@ -35,7 +35,7 @@ export interface BookSlice {
   addBook: (bookData: Partial<Book>) => Promise<void>;
   updateBook: (id: string, updates: Partial<Book>) => Promise<void>;
   deleteBook: (id: string) => Promise<void>;
-  executeSwap: (bookId: string) => Promise<void>;
+  executeSwap: (bookId: string, newOwnerId?: string) => Promise<void>;
   requestSwap: (bookId: string) => Promise<void>;
   fetchIncomingRequests: () => Promise<void>;
   fetchOpenSwapChats: () => Promise<void>;
@@ -176,7 +176,7 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
     }
   },
 
-  executeSwap: async (bookId) => {
+  executeSwap: async (bookId, newOwnerId) => {
     try {
       const { user, books } = get();
       if (!user) return;
@@ -184,34 +184,138 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
       const book = books.find(b => b.id === bookId);
       if (!book) return;
 
-      toast.loading('Takas gerçekleştiriliyor...', { id: 'swapBook' });
+      // 1. Hedef yeni sahibin ID'sini belirle
+      let finalNewOwnerId = newOwnerId;
+      if (!finalNewOwnerId) {
+        // Aktif takas talebinden bulmayı dene
+        const { data: request } = await supabase
+          .from('swap_requests')
+          .select('requester_id')
+          .eq('book_id', bookId)
+          .eq('owner_id', user.id)
+          .eq('status', 'accepted')
+          .limit(1)
+          .maybeSingle();
+        if (request) {
+          finalNewOwnerId = request.requester_id;
+        }
+      }
 
-      const dateStr = new Date().toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
-      const cityStr = user.lat != null && user.lng != null ? getCityFromCoords(user.lat, user.lng) : 'İstanbul'; 
-      
-      const { error: rpcError } = await supabase.rpc('swap_book', {
-        p_book_id: bookId,
-        p_new_owner_id: user.id,
-        p_owner_name: user.name,
-        p_city: cityStr,
-        p_date: dateStr
-      });
-      
-      if (rpcError) throw rpcError;
+      if (!finalNewOwnerId) {
+        toast.error('Takası gerçekleştirecek yeni alıcı bulunamadı.');
+        return;
+      }
 
-      const newPhysical = user.karma.physical + 5;
-      const newSocial = user.karma.social + 10;
-      
-      await supabase
+      // Alıcının profil bilgilerini çek (koordinat karşılaştırması ve isim için)
+      const { data: newOwnerProfile, error: profileError } = await supabase
         .from('profiles')
-        .update({ karma_physical: newPhysical, karma_social: newSocial })
-        .eq('id', user.id);
-      
-      toast.success('Takas başarılı! Kitap kütüphanene eklendi.', { id: 'swapBook' });
-      
-      // Bu adımda verileri yeniden çekmek en doğrusudur ama dilimlere böldüğümüz için
-      // fetchInitialData root store'da olacak. O yüzden çağıran componentte veya root store içinden
-      // yönetilebilir.
+        .select('name, lat, lng')
+        .eq('id', finalNewOwnerId)
+        .single();
+
+      if (profileError || !newOwnerProfile) {
+        toast.error('Alıcı profili veritabanında bulunamadı.');
+        return;
+      }
+
+      // GPS Konum Kontrolü (150 metre sınırı)
+      const runSwapTransaction = async (activeLat: number, activeLng: number) => {
+        toast.loading('Takas gerçekleştiriliyor...', { id: 'swapBook' });
+
+        if (newOwnerProfile.lat != null && newOwnerProfile.lng != null) {
+          const distance = calculateDistance(
+            activeLat,
+            activeLng,
+            Number(newOwnerProfile.lat),
+            Number(newOwnerProfile.lng)
+          );
+          
+          if (distance > 0.15) { // 150 metre sınırı
+            toast.error(`Takas başarısız. Güvenli buluşma alanında değilsiniz veya aranızdaki mesafe çok uzak (${Math.round(distance * 1000)}m). Takas için 150m yakınlıkta olmalısınız.`, { id: 'swapBook' });
+            return;
+          }
+        }
+
+        const dateStr = new Date().toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+        const cityStr = getCityFromCoords(activeLat, activeLng);
+
+        // RPC çağrısı
+        const { error: rpcError } = await supabase.rpc('swap_book', {
+          p_book_id: bookId,
+          p_new_owner_id: finalNewOwnerId,
+          p_owner_name: newOwnerProfile.name,
+          p_city: cityStr,
+          p_date: dateStr
+        });
+        
+        if (rpcError) throw rpcError;
+
+        // Puan güncellemesi
+        const newPhysical = user.karma.physical + 5;
+        const newSocial = user.karma.social + 10;
+        await supabase
+          .from('profiles')
+          .update({ karma_physical: newPhysical, karma_social: newSocial })
+          .eq('id', user.id);
+
+        // Takas isteğini tamamlandı ('completed') yap
+        const { data: activeReq } = await supabase
+          .from('swap_requests')
+          .select('id')
+          .eq('book_id', bookId)
+          .eq('owner_id', user.id)
+          .eq('status', 'accepted')
+          .limit(1)
+          .maybeSingle();
+
+        if (activeReq) {
+          await supabase
+            .from('swap_requests')
+            .update({ status: 'completed' })
+            .eq('id', activeReq.id);
+        }
+
+        toast.success('Takas başarılı! Kitap yeni sahibine devredildi.', { id: 'swapBook' });
+
+        // Verileri yenile
+        const rootStore = get() as any;
+        if (rootStore.fetchInitialData) {
+          await rootStore.fetchInitialData();
+        }
+      };
+
+      // Cihazın anlık GPS konumunu almaya çalış
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const currentLat = position.coords.latitude;
+            const currentLng = position.coords.longitude;
+            
+            // Konumu profil tablosuna da kaydet (güncel veri için)
+            const rootStore = get() as any;
+            if (rootStore.updateLocation) {
+              await rootStore.updateLocation(currentLat, currentLng);
+            }
+
+            await runSwapTransaction(currentLat, currentLng);
+          },
+          async (err) => {
+            console.warn("Geolocation failed, using profile coordinates", err);
+            if (user.lat == null || user.lng == null) {
+              toast.error('Anlık konumunuz alınamadı. Lütfen tarayıcı konum iznini verin.');
+              return;
+            }
+            await runSwapTransaction(Number(user.lat), Number(user.lng));
+          },
+          { enableHighAccuracy: true, timeout: 5000 }
+        );
+      } else {
+        if (user.lat == null || user.lng == null) {
+          toast.error('Konum servisleri desteklenmiyor ve profil konumunuz eksik.');
+          return;
+        }
+        await runSwapTransaction(Number(user.lat), Number(user.lng));
+      }
       
     } catch (error) {
       console.error("Error executing swap:", error);

@@ -98,7 +98,7 @@ function App() {
     );
   }
 
-  if (!session) {
+  if (!session && location.pathname !== '/privacy-policy') {
     return (
       <>
         {toaster}
@@ -111,7 +111,7 @@ function App() {
     <ThemeProvider>
       {toaster}
       {showOnboarding && <Onboarding onComplete={completeOnboarding} />}
-      <Routes location={location} key={location.pathname.startsWith('/chat') ? 'chat' : 'main'}>
+      <Routes location={location}>
         <Route path="/chat/:id" element={
           <div className="flex justify-center bg-[#F5F0E6] min-h-[100dvh]">
             <div className="w-full max-w-md bg-parchment-light relative shadow-2xl overflow-x-hidden" style={{ height: '100dvh' }}>

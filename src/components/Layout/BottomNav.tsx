@@ -5,7 +5,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 
 export const BottomNav: React.FC = () => {
-  const { requestedSwaps, openSwapChats } = useStore();
+  const requestedSwaps = useStore(state => state.requestedSwaps);
+  const openSwapChats = useStore(state => state.openSwapChats);
   const location = useLocation();
   const navigate = useNavigate();
 

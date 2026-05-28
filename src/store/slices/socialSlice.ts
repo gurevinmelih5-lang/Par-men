@@ -13,6 +13,7 @@ export interface SocialSlice {
   likeScriptum: (scriptumId: string) => Promise<void>;
   addReply: (scriptumId: string, content: string) => Promise<void>;
   mapDBScriptumToState: (dbScriptum: DBScriptum) => Scriptum;
+  deleteScriptum: (scriptumId: string) => Promise<void>;
 }
 
 export const createSocialSlice: StateCreator<SocialSlice & UserSlice, [], [], SocialSlice> = (set, get) => ({
@@ -176,6 +177,22 @@ export const createSocialSlice: StateCreator<SocialSlice & UserSlice, [], [], So
       }
     } catch (err) {
       console.error('Error toggling like on scriptum', err);
+    }
+  },
+
+  deleteScriptum: async (scriptumId) => {
+    try {
+      toast.loading('Gönderi siliniyor...', { id: 'deleteScriptum' });
+      const { error } = await supabase.from('scriptums').delete().eq('id', scriptumId);
+      if (error) throw error;
+      
+      set(state => ({
+        scriptums: state.scriptums.filter(s => s.id !== scriptumId)
+      }));
+      toast.success('Gönderi silindi.', { id: 'deleteScriptum' });
+    } catch (error) {
+      console.error("Error deleting scriptum:", error);
+      toast.error('Gönderi silinemedi.', { id: 'deleteScriptum' });
     }
   }
 });

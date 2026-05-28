@@ -8,12 +8,36 @@ import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
 export const Dashboard: React.FC = () => {
-  const { user, books, scriptums, requestSwap, requestedSwaps, updateReadingProgress, updateLocation } = useStore();
+  const user = useStore(state => state.user);
+  const books = useStore(state => state.books);
+  const scriptums = useStore(state => state.scriptums);
+  const requestSwap = useStore(state => state.requestSwap);
+  const requestedSwaps = useStore(state => state.requestedSwaps);
+  const updateReadingProgress = useStore(state => state.updateReadingProgress);
+  const updateLocation = useStore(state => state.updateLocation);
   const navigate = useNavigate();
   const [isEditingProgress, setIsEditingProgress] = useState(false);
   const [tempTotalPages, setTempTotalPages] = useState<number | string>('');
   const [tempCurrentPage, setTempCurrentPage] = useState<number | string>('');
   const [isLocating, setIsLocating] = useState(false);
+
+  const myBooks = books.filter(b => b.ownerId === user?.id);
+  const [activeBookId, setActiveBookId] = useState<string>(() => {
+    return localStorage.getItem('parsomen_active_reading_book_id') || '';
+  });
+
+  useEffect(() => {
+    if (myBooks.length > 0) {
+      const saved = localStorage.getItem('parsomen_active_reading_book_id');
+      const exists = myBooks.some(b => b.id === saved);
+      if (!saved || !exists) {
+        setActiveBookId(myBooks[0].id);
+        localStorage.setItem('parsomen_active_reading_book_id', myBooks[0].id);
+      }
+    } else {
+      setActiveBookId('');
+    }
+  }, [books, user?.id]);
 
   useEffect(() => {
     // Automatically update location once on mount
@@ -34,8 +58,8 @@ export const Dashboard: React.FC = () => {
   // Get books owned by others, sorted by distance
   const nearBooks = books.filter(b => b.ownerId !== user?.id).sort((a, b) => a.distance - b.distance);
   
-  // Find currently reading book (first book owned by user)
-  const currentBook = books.find(b => b.ownerId === user?.id);
+  // Find currently reading book by activeBookId
+  const currentBook = books.find(b => b.id === activeBookId);
   
   const totalNum = Number(tempTotalPages) || 0;
   const currentNum = Number(tempCurrentPage) || 0;
@@ -101,6 +125,25 @@ export const Dashboard: React.FC = () => {
       {currentBook ? (
         <motion.section variants={item} className="bg-parchment p-5 rounded-2xl shadow-sm border border-ink/5 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-karma/5 rounded-bl-full -mr-10 -mt-10" />
+          
+          {myBooks.length > 1 && (
+            <div className="mb-4 relative z-10 max-w-xs">
+              <select
+                value={activeBookId}
+                onChange={(e) => {
+                  setActiveBookId(e.target.value);
+                  localStorage.setItem('parsomen_active_reading_book_id', e.target.value);
+                  setIsEditingProgress(false);
+                }}
+                className="w-full bg-white/80 backdrop-blur-sm border border-ink/10 rounded-xl px-3 py-1.5 text-xs text-ink outline-none focus:border-karma/50 font-bold cursor-pointer"
+              >
+                {myBooks.map(b => (
+                  <option key={b.id} value={b.id}>{b.title} — {b.author}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="flex justify-between items-center mb-4 relative z-10">
             <h2 className="font-serif text-xl flex items-center gap-2">
               <BookOpen size={20} className="text-karma" />

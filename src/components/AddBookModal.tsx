@@ -13,7 +13,7 @@ interface AddBookModalProps {
 }
 
 export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) => {
-  const { addBook } = useStore();
+  const addBook = useStore(state => state.addBook);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<{
     title: string;
@@ -119,11 +119,20 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
         setCoverConfirmed(false);
         setCoverConfirmed(false);
 
-        // OCR ile Kitap Adı Eşleşmesi Kontrolü
+        // Mobil cihazlarda OCR adımını cihaz kilitlenmelerini önlemek için atlıyoruz
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        
+        if (isMobile) {
+           setCoverConfirmed(true);
+           return;
+        }
+
+        // OCR ile Kitap Adı Eşleşmesi Kontrolü (Sadece Masaüstü)
         setIsOcrLoading(true);
         try {
           toast.loading('Kapak görseli analiz ediliyor...', { id: 'ocr-toast' });
-          const { data: { text } } = await Tesseract.recognize(compressedFile, 'tur+eng');
+          // Daha hızlı çalışması için sadece 'tur' kullanıyoruz
+          const { data: { text } } = await Tesseract.recognize(compressedFile, 'tur');
           
           const cleanText = text.toLowerCase().replace(/[^a-zçğıöşü]/g, '');
           const titleWords = formData.title.toLowerCase().replace(/[^a-zçğıöşü\s]/g, '').split(/\s+/).filter(w => w.length > 2);

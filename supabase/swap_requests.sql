@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS public.swap_requests (
   book_id UUID REFERENCES public.books(id) ON DELETE CASCADE NOT NULL,
   requester_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   owner_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
-  status TEXT CHECK (status IN ('pending', 'accepted', 'rejected')) DEFAULT 'pending',
+  offered_book_id UUID REFERENCES public.books(id) ON DELETE CASCADE,
+  status TEXT CHECK (status IN ('pending', 'accepted', 'rejected', 'completed')) DEFAULT 'pending',
   message TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -28,3 +29,7 @@ CREATE POLICY "Users can insert swap requests" ON public.swap_requests
 -- Kitap sahibi durumu güncelleyebilir (kabul/red)
 CREATE POLICY "Owners can update swap request status" ON public.swap_requests
   FOR UPDATE USING (auth.uid() = owner_id);
+
+-- Talebi oluşturan kişi talebini iptal edip silebilir
+CREATE POLICY "Users can delete own swap requests" ON public.swap_requests
+  FOR DELETE USING (auth.uid() = requester_id);

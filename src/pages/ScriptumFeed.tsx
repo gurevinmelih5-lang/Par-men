@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Layers, Star, MessageSquareQuote, MessageCircle, Send, Book, ChevronDown, ChevronUp } from 'lucide-react';
+import { Layers, Star, MessageSquareQuote, MessageCircle, Send, Book, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import toast from 'react-hot-toast';
 
 export const ScriptumFeed: React.FC = () => {
-  const { scriptums, books, user, addScriptum, likeScriptum, addReply, setViewedUser } = useStore();
+  const { scriptums, books, user, addScriptum, likeScriptum, addReply, setViewedUser, deleteScriptum } = useStore();
   const navigate = useNavigate();
   const [newPostContent, setNewPostContent] = useState('');
   const [selectedBookId, setSelectedBookId] = useState<string>('');
@@ -153,7 +153,7 @@ export const ScriptumFeed: React.FC = () => {
               transition={{ delay: idx * 0.1 }}
               className="bg-white rounded-3xl p-5 shadow-sm border border-ink/5"
             >
-              <div className="flex items-center gap-3 mb-3">
+              <div className="flex items-center justify-between mb-3">
                 <button 
                   className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity text-left"
                   onClick={() => { setViewedUser({ id: scriptum.userId, name: scriptum.userName, avatar: scriptum.userAvatar, karma: { physical: 0, intellectual: 0, social: 0, total: 0 } } as any); navigate(`/public-profile/${scriptum.userId}`); }}
@@ -164,6 +164,20 @@ export const ScriptumFeed: React.FC = () => {
                     <p className="text-[10px] text-ink/50">{scriptum.timestamp || 'Yeni'}</p>
                   </div>
                 </button>
+                
+                {scriptum.userId === user?.id && (
+                  <button
+                    onClick={async () => {
+                      if (window.confirm('Bu paylaşımı silmek istediğinize emin misiniz?')) {
+                        await deleteScriptum(scriptum.id);
+                      }
+                    }}
+                    className="p-1.5 text-ink/40 hover:text-red-600 rounded-full hover:bg-red-50 transition-colors flex items-center justify-center cursor-pointer"
+                    title="Paylaşımı Sil"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
               </div>
 
               {book && (

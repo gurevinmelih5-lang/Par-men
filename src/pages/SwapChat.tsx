@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Send, BookOpen, CheckCheck, Ban, MoreVertical, Flag } from 'lucide-react';
+import { ChevronLeft, Send, BookOpen, CheckCheck, Ban, MoreVertical, Flag, QrCode, ScanLine, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { containsProfanity } from '../lib/moderation';
+import { QRScanner } from '../components/QRScanner';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface Message {
   id: string;
@@ -43,6 +45,19 @@ export const SwapChat: React.FC = () => {
   const [showOptions, setShowOptions] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [showQR, setShowQR] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+  const [qrTimestamp, setQrTimestamp] = useState<number>(Date.now());
+
+  useEffect(() => {
+    if (showQR) {
+      setQrTimestamp(Date.now());
+      const interval = setInterval(() => {
+        setQrTimestamp(Date.now());
+      }, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [showQR]);
 
   const swapId = activeSwapChat?.swapId;
   const chatEnded = Boolean(activeSwapChat?.chatEndedBy);
@@ -248,16 +263,22 @@ export const SwapChat: React.FC = () => {
         {activeSwapChat.ownerId === user.id && !chatEnded && (
           <button
             type="button"
-            onClick={async () => {
-              if (window.confirm('Kitabı teslim ettiniz mi? Takası tamamlamak üzeresiniz.')) {
-                await useStore.getState().executeSwap(activeSwapChat.bookId);
-                if (swapId) await useStore.getState().endSwapChat(swapId);
-              }
-            }}
-            className="w-11 h-11 flex items-center justify-center rounded-full text-green-600 active:bg-green-50 transition-colors flex-shrink-0"
-            title="Takası Tamamla"
+            onClick={() => setShowScanner(true)}
+            className="w-11 h-11 flex items-center justify-center rounded-full text-karma hover:bg-karma/10 active:bg-karma/20 transition-colors flex-shrink-0"
+            title="QR Okutarak Teslim Et"
           >
-            <CheckCheck size={22} />
+            <ScanLine size={22} />
+          </button>
+        )}
+
+        {activeSwapChat.requesterId === user.id && !chatEnded && (
+          <button
+            type="button"
+            onClick={() => setShowQR(true)}
+            className="w-11 h-11 flex items-center justify-center rounded-full text-karma hover:bg-karma/10 active:bg-karma/20 transition-colors flex-shrink-0"
+            title="Takas Doğrulama QR Kodu"
+          >
+            <QrCode size={22} />
           </button>
         )}
 
@@ -402,6 +423,65 @@ export const SwapChat: React.FC = () => {
           </button>
         </div>
       </div>
+      {/* QR Code Modal for Requester */}
+      <AnimatePresence>
+        {showQR && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-ink/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+            onClick={() => setShowQR(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              className="bg-white w-full max-w-sm rounded-3xl p-8 relative overflow-hidden flex flex-col items-center text-center"
+              onClick={e => e.stopPropagation()}
+            >
+              <button onClick={() => setShowQR(false)} className="absolute top-4 right-4 text-ink/40 hover:text-ink"><X size={24} /></button>
+              <div className="w-16 h-16 bg-karma/10 rounded-full flex items-center justify-center mb-6 text-karma"><QrCode size={32} /></div>
+              <h2 className="font-serif text-2xl font-bold mb-2 text-ink">Takas Doğrulama</h2>
+              <p className="text-sm text-ink/60 mb-8 px-4">Kitap sahibinin bu QR kodu kendi uygulamasından okutmasını isteyin.</p>
+              <div className="w-48 h-48 bg-white rounded-xl border-2 border-dashed border-ink/20 flex items-center justify-center mb-8 relative p-4 shadow-sm">
+                <QRCodeSVG value={JSON.stringify({ type: 'swap', bookId: activeSwapChat?.bookId, requesterId: user.id, timestamp: qrTimestamp })} size={150} fgColor="#1A202C" />
+                <motion.div
+                  animate={{ top: ['0%', '100%', '0%'] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                  className="absolute left-0 right-0 h-1 bg-karma/50 shadow-[0_0_10px_rgba(212,175,55,0.8)] z-10"
+                />
+              </div>
+              <div className="flex items-center gap-2 text-xs font-bold text-green-600 bg-green-50 px-4 py-2 rounded-full">
+                <CheckCheck size={16} /> Doğrulama Kodu Aktif (Her 10sn'de Yenilenir)
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Scanner for Owner */}
+      <QRScanner 
+        isOpen={showScanner}
+        onClose={() => setShowScanner(false)}
+        onScan={async (data) => {
+          setShowScanner(false);
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.type === 'swap' && parsed.bookId === activeSwapChat.bookId && parsed.requesterId && parsed.timestamp) {
+              const now = Date.now();
+              const diff = Math.abs(now - parsed.timestamp);
+              if (diff > 60000) {
+                toast.error('Karekodun süresi dolmuş! Lütfen yeni bir karekod taratın.');
+                return;
+              }
+              
+              await useStore.getState().executeSwap(parsed.bookId, parsed.requesterId);
+              if (swapId) await endSwapChat(swapId);
+            } else {
+              toast.error('Geçersiz veya bu takasa ait olmayan QR kod.');
+            }
+          } catch (err) {
+            toast.error('Karekod okunamadı.');
+          }
+        }}
+      />
     </div>
   );
 };

@@ -148,6 +148,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess }) => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
+                maxLength={50}
                 className="w-full bg-white border border-ink/10 py-3 pl-12 pr-4 rounded-xl text-base text-ink font-medium focus:outline-none focus:border-karma focus:ring-1 focus:ring-karma transition-all"
               />
             </div>
@@ -179,6 +180,22 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess }) => {
                 autoComplete={isLogin ? 'current-password' : 'new-password'}
                 className="w-full bg-white border border-ink/10 py-3 pl-12 pr-4 rounded-xl text-base text-ink font-medium focus:outline-none focus:border-karma focus:ring-1 focus:ring-karma transition-all"
               />
+            </div>
+          )}
+
+          {!isLogin && !isForgot && (
+            <div className="flex items-start gap-2 pt-1 pl-1">
+              <input
+                type="checkbox"
+                id="terms"
+                required
+                className="mt-1 w-4 h-4 accent-karma cursor-pointer"
+              />
+              <label htmlFor="terms" className="text-xs text-ink/70 leading-tight cursor-pointer select-none">
+                <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-karma font-bold hover:underline">
+                  Güvenlik Sözleşmesi ve Gizlilik Politikası
+                </a>'nı okudum ve kabul ediyorum.
+              </label>
             </div>
           )}
 

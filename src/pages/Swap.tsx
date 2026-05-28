@@ -74,20 +74,33 @@ function gezginCheckpointIcon(isGold: boolean, isSelected: boolean, orderIdx: nu
 
 
 export const Swap: React.FC = () => {
-  const { books, user, executeSwap, requestSwap } = useStore();
+  const books = useStore(state => state.books);
+  const user = useStore(state => state.user);
+  const executeSwap = useStore(state => state.executeSwap);
+  const requestSwap = useStore(state => state.requestSwap);
   const [selectedBook, setSelectedBook] = useState<string | null>(null);
   const [showQR, setShowQR] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
-  const [isSwapping, setIsSwapping] = useState(false);
   const [mapMode, setMapMode] = useState<'swap' | 'literary' | 'atlas'>('swap');
   const [selectedAtlasLocation, setSelectedAtlasLocation] = useState<AtlasPick>(null);
   const [nearbyLocation, setNearbyLocation] = useState<{ bookTitle: string; location: StoryLoc } | null>(null);
   const [showMap, setShowMap] = useState(false);
+  const [qrTimestamp, setQrTimestamp] = useState<number>(Date.now());
 
   React.useEffect(() => {
     const timer = setTimeout(() => setShowMap(true), 300);
     return () => clearTimeout(timer);
   }, []);
+
+  React.useEffect(() => {
+    if (showQR) {
+      setQrTimestamp(Date.now());
+      const interval = setInterval(() => {
+        setQrTimestamp(Date.now());
+      }, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [showQR]);
 
   const [selectedRouteBookId, setSelectedRouteBookId] = useState<string>('all');
   const [visitedCheckpoints, setVisitedCheckpoints] = useState<string[]>(() => {
@@ -417,15 +430,7 @@ export const Swap: React.FC = () => {
 
   const activeBook = otherBooks.find(b => b.id === selectedBook);
 
-  const handleSwapConfirm = async () => {
-    if (!activeBook) return;
-    setIsSwapping(true);
-    await executeSwap(activeBook.id);
-    setIsSwapping(false);
-    setShowQR(false);
-    setSelectedBook(null);
-    alert('Takas başarıyla gerçekleşti! Kitap kütüphanenize eklendi ve yolculuğu kayıt altına alındı.');
-  };
+
 
   const getLegendaryIcon = (isLegendary: boolean, isSelected: boolean) => {
     if (isLegendary) {
@@ -747,6 +752,7 @@ export const Swap: React.FC = () => {
             center={[user.lat || 41.0082, user.lng || 28.9784]}
             zoom={13}
             scrollWheelZoom={true}
+            dragging={!L.Browser.mobile}
             style={{ height: '100%', width: '100%', zIndex: 0 }}
           >
             <TileLayer
@@ -992,7 +998,7 @@ export const Swap: React.FC = () => {
               <h2 className="font-serif text-2xl font-bold mb-2 text-ink">Takas Onayı</h2>
               <p className="text-sm text-ink/60 mb-8 px-4">Karşı tarafın Parşömen uygulamasından bu QR kodu okutmasını isteyin.</p>
               <div className="w-48 h-48 bg-white rounded-xl border-2 border-dashed border-ink/20 flex items-center justify-center mb-8 relative p-4 shadow-sm">
-                <QRCodeSVG value={JSON.stringify({ type: 'swap', bookId: activeBook?.id })} size={150} fgColor="#1A202C" />
+                <QRCodeSVG value={JSON.stringify({ type: 'swap', bookId: activeBook?.id, requesterId: user.id, timestamp: qrTimestamp })} size={150} fgColor="#1A202C" />
                 <motion.div
                   animate={{ top: ['0%', '100%', '0%'] }}
                   transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
@@ -1002,13 +1008,7 @@ export const Swap: React.FC = () => {
               <div className="flex items-center gap-2 text-xs font-bold text-green-600 bg-green-50 px-4 py-2 rounded-full mb-6">
                 <CheckCircle2 size={16} /> Güvenli Bölge Doğrulandı
               </div>
-              <button
-                onClick={handleSwapConfirm}
-                disabled={isSwapping}
-                className="w-full bg-karma text-ink py-3 rounded-xl font-bold shadow-lg shadow-karma/30 hover:bg-karma/90 transition-all active:scale-[0.98]"
-              >
-                {isSwapping ? 'İşleniyor...' : 'Takası Onayla'}
-              </button>
+
             </motion.div>
           </motion.div>
         )}
@@ -1021,8 +1021,14 @@ export const Swap: React.FC = () => {
           setShowScanner(false);
           try {
             const parsed = JSON.parse(data);
-            if (parsed.type === 'swap' && parsed.bookId) {
-              executeSwap(parsed.bookId);
+            if (parsed.type === 'swap' && parsed.bookId && parsed.requesterId && parsed.timestamp) {
+              const now = Date.now();
+              const diff = Math.abs(now - parsed.timestamp);
+              if (diff > 60000) {
+                toast.error('Karekodun süresi dolmuş! Lütfen yeni bir karekod taratın.');
+                return;
+              }
+              executeSwap(parsed.bookId, parsed.requesterId);
             } else {
               toast.error('Geçersiz QR kod.');
             }

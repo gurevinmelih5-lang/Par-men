@@ -175,6 +175,7 @@ CREATE POLICY "Users can manage own duels" ON public.scriptum_duels FOR ALL USIN
 CREATE POLICY "Swap requests viewable by parties" ON public.swap_requests FOR SELECT USING (auth.uid() = requester_id OR auth.uid() = owner_id);
 CREATE POLICY "Users can create swap requests" ON public.swap_requests FOR INSERT WITH CHECK (auth.uid() = requester_id);
 CREATE POLICY "Users can update requests" ON public.swap_requests FOR UPDATE USING (auth.uid() = owner_id);
+CREATE POLICY "Users can delete own requests" ON public.swap_requests FOR DELETE USING (auth.uid() = requester_id);
 
 -- ==========================================
 -- 3. Otomatik Kullanıcı Profili Oluşturma (Trigger)
@@ -219,3 +220,13 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE TRIGGER on_scriptum_like_added_or_removed
   AFTER INSERT OR DELETE ON public.scriptum_likes
   FOR EACH ROW EXECUTE PROCEDURE public.handle_scriptum_like();
+
+-- ==========================================
+-- 4. Kolon Bazlı İptaller (Column-Level Security - Revoke)
+-- ==========================================
+-- Kullanıcıların kendi kayıtlarını güncellerken istatistik hilesi yapmalarını engellemek için kritik kolonların manuel UPDATE yetkileri iptal ediliyor.
+REVOKE UPDATE (karma_physical, karma_intellectual, karma_social) ON public.profiles FROM authenticated, anon;
+REVOKE UPDATE (likes) ON public.scriptums FROM authenticated, anon;
+REVOKE UPDATE (support_count, oppose_count) ON public.scriptum_duels FROM authenticated, anon;
+REVOKE UPDATE (progress) ON public.books FROM authenticated, anon;
+REVOKE UPDATE (book_id, requester_id, owner_id) ON public.swap_requests FROM authenticated, anon;

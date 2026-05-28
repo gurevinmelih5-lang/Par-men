@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, PolarRadiusAxis } from 'recharts';
 import { useStore } from '../store/useStore';
-import { Shield, BookOpen, MessageSquare, Award, Plus, MapPin, Edit2, Trash2, Moon, Sun, Camera, ArrowRightLeft, Clock, X, Users, ChevronRight, CheckCircle, XCircle, HelpCircle, LogOut } from 'lucide-react';
+import { Shield, BookOpen, MessageSquare, Award, Plus, MapPin, Edit2, Trash2, Moon, Sun, Camera, ArrowRightLeft, Clock, X, Users, ChevronRight, CheckCircle, XCircle, HelpCircle, LogOut, ShieldCheck } from 'lucide-react';
 import { AddBookModal } from '../components/AddBookModal';
 import { EditBookModal } from '../components/EditBookModal';
 import { UserManual } from '../components/UserManual';
@@ -544,6 +544,18 @@ export const Profile: React.FC = () => {
               <p className="text-sm font-medium text-ink break-all">{accountEmail}</p>
             </div>
           )}
+          
+          <button
+            type="button"
+            onClick={() => navigate('/privacy-policy')}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-ink/5 hover:bg-ink/10 transition-colors"
+          >
+            <div className="flex items-center gap-2 text-ink">
+              <ShieldCheck size={18} />
+              <span className="text-sm font-bold">Gizlilik Sözleşmesi ve Şartlar</span>
+            </div>
+            <ChevronRight size={18} className="text-ink/40" />
+          </button>
           <button
             type="button"
             onClick={() => void handleLogout()}
