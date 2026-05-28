@@ -473,7 +473,6 @@ export const SwapChat: React.FC = () => {
               }
               
               await useStore.getState().executeSwap(parsed.bookId, parsed.requesterId);
-              if (swapId) await endSwapChat(swapId);
             } else {
               toast.error('Geçersiz veya bu takasa ait olmayan QR kod.');
             }

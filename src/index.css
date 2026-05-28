@@ -3,6 +3,21 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --color-bg-base: 253, 251, 247;
+    --color-bg-card: 255, 255, 255;
+    --color-bg-card-alt: 245, 240, 230;
+    --color-bg-dark: 232, 220, 196;
+    
+    --color-text-primary: 26, 32, 44;
+    --color-text-secondary: 45, 55, 72;
+    --color-text-muted: 15, 23, 42;
+    
+    --color-karma: 212, 175, 55;
+    --color-karma-light: 229, 193, 88;
+    --color-karma-dark: 176, 141, 34;
+  }
+
   html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
@@ -99,32 +114,51 @@
   }
 }
 
+/* ========================
+   Themes Stylesheet
+   ======================== */
+
+.theme-dark {
+  --color-bg-base: 15, 23, 42;
+  --color-bg-card: 30, 41, 59;
+  --color-bg-card-alt: 17, 24, 39;
+  --color-bg-dark: 51, 65, 85;
+  
+  --color-text-primary: 248, 250, 252;
+  --color-text-secondary: 226, 232, 240;
+  --color-text-muted: 148, 163, 184;
+}
+
 .theme-gold {
-  --tw-bg-opacity: 1;
-  background-color: #1A1A1A; /* Dark background */
-  color: #D4AF37; /* Gold text */
+  --color-bg-base: 254, 252, 243;
+  --color-bg-card: 255, 255, 255;
+  --color-bg-card-alt: 245, 239, 219;
+  --color-bg-dark: 230, 215, 175;
+  
+  --color-text-primary: 90, 70, 10;
+  --color-text-secondary: 130, 100, 30;
+  --color-text-muted: 160, 130, 50;
 }
 
-.theme-gold .bg-parchment-light {
-  background-color: #1A1A1A;
+.theme-gold-dark {
+  --color-bg-base: 18, 18, 18;
+  --color-bg-card: 28, 28, 28;
+  --color-bg-card-alt: 24, 24, 24;
+  --color-bg-dark: 44, 44, 44;
+  
+  --color-text-primary: 212, 175, 55;
+  --color-text-secondary: 229, 193, 88;
+  --color-text-muted: 176, 141, 34;
 }
 
-.theme-gold .text-ink {
-  color: #D4AF37;
+/* Override body and white cards for themes */
+body {
+  background-color: rgb(var(--color-bg-base)) !important;
+  color: rgb(var(--color-text-primary)) !important;
 }
 
-.theme-gold .bg-white {
-  background-color: #242424;
-  border-color: #D4AF37;
-}
-
-.theme-gold .bg-ink {
-  background-color: #D4AF37;
-  color: #1A1A1A;
-}
-
-.theme-gold .text-karma {
-  color: #FACC15;
+.bg-white {
+  background-color: rgb(var(--color-bg-card)) !important;
 }
 
 /* ========================

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, PolarRadiusAxis } from 'recharts';
 import { useStore } from '../store/useStore';
-import { Shield, BookOpen, MessageSquare, Award, Plus, MapPin, Edit2, Trash2, Moon, Sun, Camera, ArrowRightLeft, Clock, X, Users, ChevronRight, CheckCircle, XCircle, HelpCircle, LogOut, ShieldCheck } from 'lucide-react';
+import { Shield, BookOpen, MessageSquare, Award, Plus, MapPin, Edit2, Trash2, Camera, ArrowRightLeft, Clock, X, Users, ChevronRight, CheckCircle, XCircle, HelpCircle, LogOut, ShieldCheck } from 'lucide-react';
 import { AddBookModal } from '../components/AddBookModal';
 import { EditBookModal } from '../components/EditBookModal';
 import { UserManual } from '../components/UserManual';
@@ -39,6 +39,12 @@ export const Profile: React.FC = () => {
       setAccountEmail(session?.user?.email ?? null);
     });
   }, []);
+
+  React.useEffect(() => {
+    if (user.karma.total < 100 && (theme === 'gold' || theme === 'gold-dark')) {
+      setTheme('light');
+    }
+  }, [user.karma.total, theme, setTheme]);
 
   const handleLogout = async () => {
     toast((t) => (
@@ -144,15 +150,6 @@ export const Profile: React.FC = () => {
             <div className={`inline-block text-ink text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-sm ${user.karma.total >= 80 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-white' : 'bg-karma'}`}>
               {title}
             </div>
-            {user.karma.total >= 80 && (
-              <button
-                onClick={() => setTheme(theme === 'gold' ? 'light' : 'gold')}
-                className="flex items-center gap-1 text-[10px] bg-ink text-parchment-light px-2 py-1 rounded-full font-bold hover:bg-ink/80 transition-colors shadow-sm"
-              >
-                {theme === 'gold' ? <Sun size={12} /> : <Moon size={12} />}
-                {theme === 'gold' ? 'Aydınlık' : 'Altın Tema'}
-              </button>
-            )}
             <button 
               onClick={handleUpdateLocation}
               disabled={isUpdatingLocation}
@@ -533,6 +530,61 @@ export const Profile: React.FC = () => {
             ))}
           </div>
         )}
+      </motion.section>
+
+      {/* Görünüm & Tema Seçimi */}
+      <motion.section variants={item} className="space-y-3">
+        <h2 className="font-serif text-xl text-ink/90">Görünüm & Tema</h2>
+        <div className="bg-white rounded-2xl border border-ink/10 shadow-sm p-4 grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => setTheme('light')}
+            className={`p-3 rounded-xl border text-xs font-bold text-center transition-all ${
+              theme === 'light' 
+                ? 'bg-ink text-white border-ink' 
+                : 'bg-ink/5 text-ink border-ink/10 hover:bg-ink/10'
+            }`}
+          >
+            ☀️ Standart Açık
+          </button>
+          <button
+            type="button"
+            onClick={() => setTheme('dark')}
+            className={`p-3 rounded-xl border text-xs font-bold text-center transition-all ${
+              theme === 'dark' 
+                ? 'bg-ink text-white border-ink' 
+                : 'bg-ink/5 text-ink border-ink/10 hover:bg-ink/10'
+            }`}
+          >
+            🌙 Standart Koyu
+          </button>
+          <button
+            type="button"
+            disabled={user.karma.total < 100}
+            onClick={() => setTheme('gold')}
+            className={`p-3 rounded-xl border text-xs font-bold text-center transition-all flex flex-col items-center justify-center gap-1 ${
+              user.karma.total < 100 
+                ? 'bg-ink/5 text-ink/30 border-ink/5 cursor-not-allowed opacity-50' 
+                : (theme === 'gold' ? 'bg-karma text-ink border-karma shadow-md' : 'bg-karma/10 text-karma border-karma/30 hover:bg-karma/20')
+            }`}
+          >
+            <span>✨ Altın Açık</span>
+            {user.karma.total < 100 && <span className="text-[9px] font-sans font-medium text-ink/40">🔒 (100 Karma)</span>}
+          </button>
+          <button
+            type="button"
+            disabled={user.karma.total < 100}
+            onClick={() => setTheme('gold-dark')}
+            className={`p-3 rounded-xl border text-xs font-bold text-center transition-all flex flex-col items-center justify-center gap-1 ${
+              user.karma.total < 100 
+                ? 'bg-ink/5 text-ink/30 border-ink/5 cursor-not-allowed opacity-50' 
+                : (theme === 'gold-dark' ? 'bg-karma text-ink border-karma shadow-md' : 'bg-karma/10 text-karma border-karma/30 hover:bg-karma/20')
+            }`}
+          >
+            <span>🏆 Altın Koyu</span>
+            {user.karma.total < 100 && <span className="text-[9px] font-sans font-medium text-ink/40">🔒 (100 Karma)</span>}
+          </button>
+        </div>
       </motion.section>
 
       <motion.section variants={item} className="space-y-3">

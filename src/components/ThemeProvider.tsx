@@ -5,10 +5,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const { theme } = useStore();
 
   useEffect(() => {
-    if (theme === 'gold') {
-      document.documentElement.classList.add('theme-gold');
-    } else {
-      document.documentElement.classList.remove('theme-gold');
+    // Remove all previous theme classes
+    document.documentElement.classList.remove('theme-dark', 'theme-gold', 'theme-gold-dark');
+    
+    // Add current theme class if it's not the default 'light' theme
+    if (theme !== 'light') {
+      document.documentElement.classList.add(`theme-${theme}`);
     }
   }, [theme]);
 

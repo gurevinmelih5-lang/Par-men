@@ -21,6 +21,7 @@ import { ThemeProvider } from './components/ThemeProvider';
 import { Onboarding, useOnboarding } from './components/Onboarding';
 import { ScriptumFeed } from './pages/ScriptumFeed';
 import { useSwapSubscriptions } from './hooks/useSwapSubscriptions';
+import { SwapRatingManager } from './components/SwapRatingManager';
 
 function App() {
   const [session, setSession] = React.useState<Session | null>(null);
@@ -110,6 +111,7 @@ function App() {
   return (
     <ThemeProvider>
       {toaster}
+      {session && <SwapRatingManager />}
       {showOnboarding && <Onboarding onComplete={completeOnboarding} />}
       <Routes location={location}>
         <Route path="/chat/:id" element={

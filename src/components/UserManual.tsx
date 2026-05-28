@@ -75,16 +75,19 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose }) => {
               <strong>Sosyal Güvenilirlik:</strong> Takaslara zamanında gitmen ve iletişim nezaketin.
             </li>
           </ul>
-          <p className="font-bold text-ink">Unvanlar</p>
-          <ul className="list-disc pl-5 space-y-1">
+          <p className="font-bold text-ink">Unvanlar ve Kazanma Koşulları</p>
+          <ul className="list-disc pl-5 space-y-2">
             <li>
-              <span className="text-karma font-bold">Mühürlü Okur (80+ Karma):</span> Altın tema kilidini açar, profilde vurgulanırsın.
+              <span className="text-karma font-bold">Mühürlü Okur:</span> Toplam (ortalama) Karma puanı <strong>80 ve üzeri</strong> olduğunda kazanılır. Profilde özel altın rozetle vurgulanır ve 100+ Karma puanına ulaşıldığında Altın Tema seçeneklerinin kilidini açar.
             </li>
             <li>
-              <span className="text-ink font-bold">Filozof:</span> Entelektüel puanı yüksek okurlar.
+              <span className="text-ink font-bold">Filozof:</span> Toplam Karma puanı 80'in altındayken, kullanıcının <strong>Entelektüel Katkı</strong> puanı diğer puan kategorilerinden yüksek veya onlara eşit ve en yüksek düzeyde olduğunda atanır.
             </li>
             <li>
-              <span className="text-ink font-bold">Arşivci:</span> Kitaplarına en iyi bakan okurlar.
+              <span className="text-ink font-bold">Arşivci:</span> Toplam Karma puanı 80'in altındayken, kullanıcının kitaplara bakış kalitesini gösteren <strong>Fiziksel Kondisyon</strong> puanı diğer puan kategorilerinden yüksek olduğunda atanır.
+            </li>
+            <li>
+              <span className="text-ink font-bold">Seyyah:</span> Toplam Karma puanı 80'in altındayken, kullanıcının takas nezaketini ve güvenilirliğini gösteren <strong>Sosyal Güvenilirlik</strong> puanı diğer puan kategorilerinden yüksek olduğunda atanır.
             </li>
           </ul>
         </div>

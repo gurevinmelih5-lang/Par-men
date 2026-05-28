@@ -8,19 +8,19 @@ export default {
     extend: {
       colors: {
         parchment: {
-          light: '#FDFBF7',
-          DEFAULT: '#F5F0E6',
-          dark: '#E8DCC4'
+          light: 'rgb(var(--color-bg-base) / <alpha-value>)',
+          DEFAULT: 'rgb(var(--color-bg-card-alt) / <alpha-value>)',
+          dark: 'rgb(var(--color-bg-dark) / <alpha-value>)'
         },
         ink: {
-          light: '#2D3748',
-          DEFAULT: '#1A202C',
-          dark: '#0F172A'
+          light: 'rgb(var(--color-text-secondary) / <alpha-value>)',
+          DEFAULT: 'rgb(var(--color-text-primary) / <alpha-value>)',
+          dark: 'rgb(var(--color-text-muted) / <alpha-value>)'
         },
         karma: {
-          DEFAULT: '#D4AF37',
-          light: '#E5C158',
-          dark: '#B08D22'
+          DEFAULT: 'rgb(var(--color-karma) / <alpha-value>)',
+          light: 'rgb(var(--color-karma-light) / <alpha-value>)',
+          dark: 'rgb(var(--color-karma-dark) / <alpha-value>)'
         }
       },
       fontFamily: {

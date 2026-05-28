@@ -22,8 +22,12 @@ export interface SwapRequest {
   requesterName: string;
   requesterAvatar: string;
   requesterId: string;
-  status: 'pending' | 'accepted' | 'rejected';
+  status: 'pending' | 'accepted' | 'rejected' | 'completed';
   createdAt: string;
+  completedAt?: string;
+  ratingOwnerSocial?: number;
+  ratingOwnerPhysical?: number;
+  ratingRequesterSocial?: number;
 }
 
 export interface BookSlice {
@@ -44,6 +48,7 @@ export interface BookSlice {
   endSwapChat: (swapRequestId: string) => Promise<void>;
   respondToSwapRequest: (requestId: string, accept: boolean, offeredBookId?: string) => Promise<void>;
   updateReadingProgress: (bookId: string, progress: number, totalPages: number, currentPage: number) => Promise<void>;
+  submitSwapRating: (swapId: string, ratings: { ratingOwnerSocial?: number; ratingOwnerPhysical?: number; ratingRequesterSocial?: number }) => Promise<void>;
   mapDBBookToState: (dbBook: DBBook, userLat?: number, userLng?: number) => Book;
 }
 
@@ -630,6 +635,30 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
     } catch (error) {
       console.error("Error updating reading progress:", error);
       toast.error('İlerleme kaydedilemedi.');
+    }
+  },
+
+  submitSwapRating: async (swapId, ratings) => {
+    try {
+      const { error } = await supabase.rpc('submit_swap_rating', {
+        p_swap_request_id: swapId,
+        p_rating_owner_social: ratings.ratingOwnerSocial || null,
+        p_rating_owner_physical: ratings.ratingOwnerPhysical || null,
+        p_rating_requester_social: ratings.ratingRequesterSocial || null
+      });
+
+      if (error) throw error;
+      toast.success('Puanlamanız kaydedildi. Teşekkür ederiz!');
+      
+      // Refresh user's karma/profile data
+      const rootStore = get() as any;
+      if (rootStore.fetchInitialData) {
+        await rootStore.fetchInitialData();
+      }
+    } catch (error: any) {
+      console.error('Error submitting swap rating:', error);
+      toast.error(`Puanlama kaydedilemedi: ${error?.message || error}`);
+      throw error;
     }
   }
 });
