@@ -181,7 +181,7 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
     }
   },
 
-  executeSwap: async (bookId, newOwnerId) => {
+  executeSwap: async (bookId, _newOwnerId) => {
     try {
       const { user, books } = get();
       if (!user) return;
@@ -189,27 +189,21 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
       const book = books.find(b => b.id === bookId);
       if (!book) return;
 
-      // 1. Hedef yeni sahibin ID'sini belirle
-      let finalNewOwnerId = newOwnerId;
-      if (!finalNewOwnerId) {
-        // Aktif takas talebinden bulmayı dene
-        const { data: request } = await supabase
-          .from('swap_requests')
-          .select('requester_id')
-          .eq('book_id', bookId)
-          .eq('owner_id', user.id)
-          .eq('status', 'accepted')
-          .limit(1)
-          .maybeSingle();
-        if (request) {
-          finalNewOwnerId = request.requester_id;
-        }
-      }
+      // 1. Aktif takas talebini bul (durumu 'accepted' olan)
+      const { data: request, error: reqErr } = await supabase
+        .from('swap_requests')
+        .select('id, requester_id, owner_id')
+        .eq('status', 'accepted')
+        .or(`book_id.eq.${bookId},offered_book_id.eq.${bookId}`)
+        .limit(1)
+        .maybeSingle();
 
-      if (!finalNewOwnerId) {
-        toast.error('Takası gerçekleştirecek yeni alıcı bulunamadı.');
+      if (reqErr || !request) {
+        toast.error('Aktif takas talebi bulunamadı.');
         return;
       }
+
+      const finalNewOwnerId = request.owner_id === user.id ? request.requester_id : request.owner_id;
 
       // Alıcının profil bilgilerini çek (koordinat karşılaştırması ve isim için)
       const { data: newOwnerProfile, error: profileError } = await supabase
@@ -242,45 +236,24 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
         }
 
         const dateStr = new Date().toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
-        const cityStr = getCityFromCoords(activeLat, activeLng);
+        
+        // Karşı tarafın şehrini belirle
+        const requesterCity = newOwnerProfile.lat != null && newOwnerProfile.lng != null
+          ? getCityFromCoords(Number(newOwnerProfile.lat), Number(newOwnerProfile.lng))
+          : 'İstanbul';
+        const ownerCity = getCityFromCoords(activeLat, activeLng);
 
         // RPC çağrısı
-        const { error: rpcError } = await supabase.rpc('swap_book', {
-          p_book_id: bookId,
-          p_new_owner_id: finalNewOwnerId,
-          p_owner_name: newOwnerProfile.name,
-          p_city: cityStr,
+        const { error: rpcError } = await supabase.rpc('complete_two_way_book_swap', {
+          p_swap_request_id: request.id,
+          p_owner_city: ownerCity,
+          p_requester_city: requesterCity,
           p_date: dateStr
         });
         
         if (rpcError) throw rpcError;
 
-        // Puan güncellemesi
-        const newPhysical = user.karma.physical + 5;
-        const newSocial = user.karma.social + 10;
-        await supabase
-          .from('profiles')
-          .update({ karma_physical: newPhysical, karma_social: newSocial })
-          .eq('id', user.id);
-
-        // Takas isteğini tamamlandı ('completed') yap
-        const { data: activeReq } = await supabase
-          .from('swap_requests')
-          .select('id')
-          .eq('book_id', bookId)
-          .eq('owner_id', user.id)
-          .eq('status', 'accepted')
-          .limit(1)
-          .maybeSingle();
-
-        if (activeReq) {
-          await supabase
-            .from('swap_requests')
-            .update({ status: 'completed' })
-            .eq('id', activeReq.id);
-        }
-
-        toast.success('Takas başarılı! Kitap yeni sahibine devredildi.', { id: 'swapBook' });
+        toast.success('Takas başarılı! Kitaplar yeni sahiplerine devredildi.', { id: 'swapBook' });
 
         // Verileri yenile
         const rootStore = get() as any;
@@ -568,14 +541,6 @@ export const createBookSlice: StateCreator<BookSlice & UserSlice, [], [], BookSl
         });
 
         if (rpcError) throw rpcError;
-
-        // Kullanıcı karmalarını güncelle (Fiziksel karma +5, Sosyal karma +10)
-        const newPhysical = user.karma.physical + 5;
-        const newSocial = user.karma.social + 10;
-        await supabase
-          .from('profiles')
-          .update({ karma_physical: newPhysical, karma_social: newSocial })
-          .eq('id', user.id);
 
         set(state => ({
           incomingRequests: state.incomingRequests.filter(r => r.id !== requestId),

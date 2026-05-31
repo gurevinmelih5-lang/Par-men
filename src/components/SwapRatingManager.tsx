@@ -63,17 +63,16 @@ export const SwapRatingManager: React.FC = () => {
       if (error) throw error;
 
       const ratingsNeeded: PendingRatingSwap[] = [];
-      const now = Date.now();
 
       for (const rawRow of (data || [])) {
         const row = rawRow as any;
         const isRequester = row.requester_id === user.id;
         const completedTime = row.completed_at ? new Date(row.completed_at).getTime() : 0;
         
-        // Timer constraint: Must be completed and 10 minutes (600,000 ms) must have passed
-        const tenMinutesPassed = completedTime && (now - completedTime >= 10 * 60 * 1000);
+        // Trigger rating immediately upon swap completion
+        const isCompleted = completedTime > 0;
         
-        if (tenMinutesPassed) {
+        if (isCompleted) {
           if (isRequester && (row.rating_owner_social === null || row.rating_owner_physical === null)) {
             ratingsNeeded.push({
               id: row.id,

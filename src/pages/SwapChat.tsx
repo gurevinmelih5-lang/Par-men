@@ -1,13 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Send, BookOpen, CheckCheck, Ban, MoreVertical, Flag, QrCode, ScanLine, X } from 'lucide-react';
+import { ChevronLeft, Send, BookOpen, CheckCheck, Ban, MoreVertical, Flag, KeyRound, Lock, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { containsProfanity } from '../lib/moderation';
-import { QRScanner } from '../components/QRScanner';
-import { QRCodeSVG } from 'qrcode.react';
+import { generate6DigitCode, verify6DigitCode } from '../lib/security';
 
 interface Message {
   id: string;
@@ -48,13 +47,23 @@ export const SwapChat: React.FC = () => {
   const [showQR, setShowQR] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [qrTimestamp, setQrTimestamp] = useState<number>(Date.now());
+  const [secondsLeft, setSecondsLeft] = useState(10);
+  const [enteredCode, setEnteredCode] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
     if (showQR) {
       setQrTimestamp(Date.now());
+      setSecondsLeft(10);
       const interval = setInterval(() => {
-        setQrTimestamp(Date.now());
-      }, 10000);
+        setSecondsLeft((prev) => {
+          if (prev <= 1) {
+            setQrTimestamp(Date.now());
+            return 10;
+          }
+          return prev - 1;
+        });
+      }, 1000);
       return () => clearInterval(interval);
     }
   }, [showQR]);
@@ -263,11 +272,11 @@ export const SwapChat: React.FC = () => {
         {activeSwapChat.ownerId === user.id && !chatEnded && (
           <button
             type="button"
-            onClick={() => setShowScanner(true)}
+            onClick={() => { setShowScanner(true); setEnteredCode(''); }}
             className="w-11 h-11 flex items-center justify-center rounded-full text-karma hover:bg-karma/10 active:bg-karma/20 transition-colors flex-shrink-0"
-            title="QR Okutarak Teslim Et"
+            title="Güvenlik Kodu Gir"
           >
-            <ScanLine size={22} />
+            <Lock size={22} />
           </button>
         )}
 
@@ -276,9 +285,9 @@ export const SwapChat: React.FC = () => {
             type="button"
             onClick={() => setShowQR(true)}
             className="w-11 h-11 flex items-center justify-center rounded-full text-karma hover:bg-karma/10 active:bg-karma/20 transition-colors flex-shrink-0"
-            title="Takas Doğrulama QR Kodu"
+            title="Güvenlik Kodu Göster"
           >
-            <QrCode size={22} />
+            <KeyRound size={22} />
           </button>
         )}
 
@@ -423,7 +432,7 @@ export const SwapChat: React.FC = () => {
           </button>
         </div>
       </div>
-      {/* QR Code Modal for Requester */}
+      {/* Security Code Display Modal for Requester */}
       <AnimatePresence>
         {showQR && (
           <motion.div
@@ -433,54 +442,104 @@ export const SwapChat: React.FC = () => {
           >
             <motion.div
               initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
-              className="bg-white w-full max-w-sm rounded-3xl p-8 relative overflow-hidden flex flex-col items-center text-center"
+              className="bg-white w-full max-w-sm rounded-3xl p-8 relative overflow-hidden flex flex-col items-center text-center shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
-              <button onClick={() => setShowQR(false)} className="absolute top-4 right-4 text-ink/40 hover:text-ink"><X size={24} /></button>
-              <div className="w-16 h-16 bg-karma/10 rounded-full flex items-center justify-center mb-6 text-karma"><QrCode size={32} /></div>
+              <button onClick={() => setShowQR(false)} className="absolute top-4 right-4 text-ink/40 hover:text-ink min-h-[44px] px-2"><X size={24} /></button>
+              <div className="w-16 h-16 bg-karma/10 rounded-full flex items-center justify-center mb-4 text-karma"><KeyRound size={32} /></div>
               <h2 className="font-serif text-2xl font-bold mb-2 text-ink">Takas Doğrulama</h2>
-              <p className="text-sm text-ink/60 mb-8 px-4">Kitap sahibinin bu QR kodu kendi uygulamasından okutmasını isteyin.</p>
-              <div className="w-48 h-48 bg-white rounded-xl border-2 border-dashed border-ink/20 flex items-center justify-center mb-8 relative p-4 shadow-sm">
-                <QRCodeSVG value={JSON.stringify({ type: 'swap', bookId: activeSwapChat?.bookId, requesterId: user.id, timestamp: qrTimestamp })} size={150} fgColor="#1A202C" />
-                <motion.div
-                  animate={{ top: ['0%', '100%', '0%'] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
-                  className="absolute left-0 right-0 h-1 bg-karma/50 shadow-[0_0_10px_rgba(212,175,55,0.8)] z-10"
-                />
+              <p className="text-xs text-ink/60 mb-6 px-4">Bu güvenlik kodunu kitap sahibine ileterek takası onaylamasını isteyin.</p>
+              
+              {/* Giant 6-digit code display */}
+              <div className="bg-parchment-light py-5 px-8 rounded-2xl border border-ink/10 mb-6 tracking-widest text-4xl font-mono font-bold text-ink shadow-sm relative overflow-hidden">
+                {generate6DigitCode(swapId!, qrTimestamp)}
               </div>
-              <div className="flex items-center gap-2 text-xs font-bold text-green-600 bg-green-50 px-4 py-2 rounded-full">
-                <CheckCheck size={16} /> Doğrulama Kodu Aktif (Her 10sn'de Yenilenir)
+              
+              {/* Progress countdown circle/line */}
+              <div className="w-full max-w-[200px] mb-6">
+                <div className="flex justify-between items-center text-[10px] text-ink/40 font-bold mb-1">
+                  <span>KOD YENİLENİYOR</span>
+                  <span>{secondsLeft}sn</span>
+                </div>
+                <div className="w-full bg-ink/5 h-1.5 rounded-full overflow-hidden">
+                  <motion.div
+                    key={secondsLeft}
+                    initial={{ width: '100%' }}
+                    animate={{ width: '0%' }}
+                    transition={{ duration: 1, ease: 'linear' }}
+                    className="h-full bg-karma rounded-full"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 text-[10px] font-bold text-green-700 bg-green-50 px-4 py-2 rounded-full border border-green-200">
+                <CheckCheck size={14} /> Doğrulama Kodu Aktif
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Scanner for Owner */}
-      <QRScanner 
-        isOpen={showScanner}
-        onClose={() => setShowScanner(false)}
-        onScan={async (data) => {
-          setShowScanner(false);
-          try {
-            const parsed = JSON.parse(data);
-            if (parsed.type === 'swap' && parsed.bookId === activeSwapChat.bookId && parsed.requesterId && parsed.timestamp) {
-              const now = Date.now();
-              const diff = Math.abs(now - parsed.timestamp);
-              if (diff > 60000) {
-                toast.error('Karekodun süresi dolmuş! Lütfen yeni bir karekod taratın.');
-                return;
-              }
+      {/* Security Code Entry Modal for Owner */}
+      <AnimatePresence>
+        {showScanner && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-ink/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+            onClick={() => setShowScanner(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              className="bg-white w-full max-w-sm rounded-3xl p-8 relative overflow-hidden flex flex-col items-center text-center shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <button onClick={() => setShowScanner(false)} className="absolute top-4 right-4 text-ink/40 hover:text-ink min-h-[44px] px-2"><X size={24} /></button>
+              <div className="w-16 h-16 bg-karma/10 rounded-full flex items-center justify-center mb-4 text-karma"><Lock size={32} /></div>
+              <h2 className="font-serif text-2xl font-bold mb-2 text-ink">Güvenlik Kodu Doğrulama</h2>
+              <p className="text-xs text-ink/60 mb-6 px-4">Alıcının ekranındaki 6 haneli güvenlik kodunu girerek takası tamamlayın.</p>
               
-              await useStore.getState().executeSwap(parsed.bookId, parsed.requesterId);
-            } else {
-              toast.error('Geçersiz veya bu takasa ait olmayan QR kod.');
-            }
-          } catch (err) {
-            toast.error('Karekod okunamadı.');
-          }
-        }}
-      />
+              <div className="w-full mb-6">
+                <input
+                  type="text"
+                  pattern="[0-9]*"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={enteredCode}
+                  onChange={(e) => setEnteredCode(e.target.value.replace(/[^0-9]/g, ''))}
+                  placeholder="000000"
+                  className="w-full bg-parchment-light border border-ink/10 py-4 rounded-2xl text-center text-3xl font-mono font-bold tracking-widest text-ink focus:outline-none focus:border-karma transition-all shadow-inner"
+                  style={{ fontSize: '32px' }}
+                />
+              </div>
+
+              <button
+                type="button"
+                disabled={enteredCode.length !== 6 || isVerifying}
+                onClick={async () => {
+                  setIsVerifying(true);
+                  try {
+                    const isValid = verify6DigitCode(swapId!, enteredCode);
+                    if (isValid) {
+                      await useStore.getState().executeSwap(activeSwapChat.bookId, activeSwapChat.requesterId);
+                      setShowScanner(false);
+                      setEnteredCode('');
+                    } else {
+                      toast.error('Geçersiz veya süresi dolmuş güvenlik kodu.');
+                    }
+                  } catch (err) {
+                    console.error(err);
+                  } finally {
+                    setIsVerifying(false);
+                  }
+                }}
+                className="w-full bg-ink text-parchment-light py-4 rounded-xl font-bold active:bg-ink/80 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed mb-2 min-h-[48px]"
+              >
+                {isVerifying ? 'Doğrulanıyor...' : 'Kodu Doğrula ve Teslim Et'}
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

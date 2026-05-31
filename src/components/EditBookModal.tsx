@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, BookOpen, Upload } from 'lucide-react';
+import { X, BookOpen, Upload, CheckCircle2 } from 'lucide-react';
+import Tesseract from 'tesseract.js';
+import toast from 'react-hot-toast';
 import { useStore } from '../store/useStore';
 import { supabase } from '../lib/supabase';
 import type { Book as BookType } from '../types/models';
@@ -26,6 +28,10 @@ export const EditBookModal: React.FC<EditBookModalProps> = ({ isOpen, onClose, b
   });
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [isManualUpload, setIsManualUpload] = useState(false);
+  const [coverConfirmed, setCoverConfirmed] = useState(false);
+  const [manualConfirm, setManualConfirm] = useState(false);
+  const [isOcrLoading, setIsOcrLoading] = useState(false);
 
   useEffect(() => {
     if (book) {
@@ -40,10 +46,20 @@ export const EditBookModal: React.FC<EditBookModalProps> = ({ isOpen, onClose, b
       });
       setPreview(book.cover);
       setFile(null);
+      setIsManualUpload(false);
+      setCoverConfirmed(true);
+      setManualConfirm(false);
+      setIsOcrLoading(false);
     }
   }, [book]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!formData.title.trim()) {
+      toast.error('Lütfen önce kitap adını girin!');
+      e.target.value = '';
+      return;
+    }
+
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       
@@ -60,10 +76,45 @@ export const EditBookModal: React.FC<EditBookModalProps> = ({ isOpen, onClose, b
         const compressedFile = await imageCompression(selectedFile, options);
         setFile(compressedFile);
         setPreview(URL.createObjectURL(compressedFile));
+        setIsManualUpload(true);
+        setCoverConfirmed(false);
+        setManualConfirm(false);
+
+        // OCR ile Kitap Adı veya Yazar Eşleşmesi Kontrolü
+        setIsOcrLoading(true);
+        try {
+          toast.loading('Kapak görseli analiz ediliyor...', { id: 'ocr-toast' });
+          const { data: { text } } = await Tesseract.recognize(compressedFile, 'tur');
+          
+          const cleanText = text.toLowerCase().replace(/[^a-zçğıöşü]/g, '');
+          const titleWords = formData.title.toLowerCase().replace(/[^a-zçğıöşü\s]/g, '').split(/\s+/).filter(w => w.length > 2);
+          const authorWords = formData.author.toLowerCase().replace(/[^a-zçğıöşü\s]/g, '').split(/\s+/).filter(w => w.length > 2);
+          
+          const titleMatches = titleWords.length > 0 && titleWords.some(word => cleanText.includes(word));
+          const authorMatches = authorWords.length > 0 && authorWords.some(word => cleanText.includes(word));
+          const matches = titleMatches || authorMatches;
+          
+          if (matches) {
+             setCoverConfirmed(true);
+             toast.success('Kapak metni onaylandı!', { id: 'ocr-toast' });
+          } else {
+             setCoverConfirmed(false);
+             toast('Kitap adı veya yazarı görselle tam eşleşmedi. Görsel doğruysa lütfen manuel olarak onaylayın.', { id: 'ocr-toast', duration: 4000, icon: '⚠️' });
+          }
+        } catch (ocrErr) {
+          console.error('OCR Hatası:', ocrErr);
+          setCoverConfirmed(false);
+          toast.error('Görsel analiz edilemedi! Kapak doğruysa lütfen manuel olarak onaylayın.', { id: 'ocr-toast' });
+        } finally {
+          setIsOcrLoading(false);
+        }
       } catch (error) {
         console.error('Error compressing image:', error);
         setFile(selectedFile);
         setPreview(URL.createObjectURL(selectedFile));
+        setIsManualUpload(true);
+        setCoverConfirmed(false);
+        setManualConfirm(false);
       }
     }
   };
@@ -71,6 +122,11 @@ export const EditBookModal: React.FC<EditBookModalProps> = ({ isOpen, onClose, b
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!book) return;
+
+    if (isManualUpload && !coverConfirmed && !manualConfirm) {
+      toast.error('Lütfen yüklediğiniz görselin kitap kapağıyla eşleştiğini onaylayın.');
+      return;
+    }
     
     setLoading(true);
     let finalCoverUrl = formData.cover;
@@ -193,6 +249,62 @@ export const EditBookModal: React.FC<EditBookModalProps> = ({ isOpen, onClose, b
                     </div>
                   )}
                 </div>
+
+                {/* Onay durumu — sadece manuel yükleme yapıldığında */}
+                {isManualUpload && preview && (
+                  <div className="mt-2 space-y-2">
+                    {isOcrLoading && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-3 border rounded-xl bg-parchment-dark/30 border-ink/5"
+                      >
+                        <div className="flex items-center gap-2 text-ink/60 text-xs font-medium py-1">
+                          <div className="w-4 h-4 border-2 border-karma border-t-transparent rounded-full animate-spin" />
+                          Görsel yapay zeka ile inceleniyor...
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {!isOcrLoading && coverConfirmed && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-3 border rounded-xl bg-green-50 border-green-200"
+                      >
+                        <div className="flex items-start gap-3">
+                          <CheckCircle2 size={16} className="text-green-500 mt-0.5" />
+                          <span className="text-xs text-green-800 font-bold leading-relaxed">
+                            Yapay Zeka Onayı: Görsel, kitap bilgileriyle başarıyla eşleşti.
+                          </span>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {!isOcrLoading && !coverConfirmed && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-3 border rounded-xl bg-amber-50 border-amber-200"
+                      >
+                        <p className="text-xs text-amber-800 font-bold mb-2">
+                          ⚠️ Yapay Zeka kitap bilgileri ile görseli tam eşleştiremedi. Kapak doğruysa lütfen manuel olarak onaylayın.
+                        </p>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={manualConfirm}
+                            onChange={(e) => setManualConfirm(e.target.checked)}
+                            className="w-4 h-4 rounded text-karma focus:ring-karma cursor-pointer"
+                          />
+                          <span className="text-[11px] text-amber-900 font-bold select-none cursor-pointer">
+                            Yüklediğim görselin kitap kapağı olduğunu onaylıyorum.
+                          </span>
+                        </label>
+                      </motion.div>
+                    )}
+                  </div>
+                )}
               </div>
               
               <div className="grid grid-cols-2 gap-3">
@@ -225,7 +337,7 @@ export const EditBookModal: React.FC<EditBookModalProps> = ({ isOpen, onClose, b
 
               <button 
                 type="submit" 
-                disabled={loading}
+                disabled={loading || (isManualUpload && !coverConfirmed && !manualConfirm) || isOcrLoading}
                 className="w-full mt-1 bg-ink text-parchment-light py-4 rounded-xl font-bold shadow-lg shadow-ink/20 active:bg-ink/80 transition-all active:scale-[0.98] disabled:opacity-50"
               >
                 {loading ? 'Güncelleniyor...' : 'Değişiklikleri Kaydet'}

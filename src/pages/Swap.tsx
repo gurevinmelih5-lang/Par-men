@@ -1,12 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, QrCode, X, CheckCircle2, Flame, Map as MapIcon, Compass, Quote, ScanLine } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
+import { MapPin, KeyRound, Lock, X, CheckCircle2, Flame, Map as MapIcon, Compass, Quote } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import type { Book } from '../types/models';
 import { gezginTurkeyBooksAsAppBooks } from '../data/gezginTurkiyeAtlas';
 import toast from 'react-hot-toast';
-import { QRScanner } from '../components/QRScanner';
+import { generate6DigitCode, verify6DigitCode } from '../lib/security';
 import { MapContainer, TileLayer, Marker, Circle, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import { getCityFromCoords, CITIES_COORDS } from '../lib/location';
@@ -103,14 +102,73 @@ export const Swap: React.FC = () => {
   }, [showQR]);
 
   const [selectedRouteBookId, setSelectedRouteBookId] = useState<string>('all');
-  const [visitedCheckpoints, setVisitedCheckpoints] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('gezgin_visited_checkpoints');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
+  const [visitedCheckpoints, setVisitedCheckpoints] = useState<string[]>([]);
+  const [enteredCode, setEnteredCode] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(10);
+  const [activeSwapId, setActiveSwapId] = useState<string | null>(null);
+
+  // Load visited checkpoints from database
+  useEffect(() => {
+    if (!user?.id) return;
+    const fetchVisited = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('visited_checkpoints')
+          .select('checkpoint_key')
+          .eq('user_id', user.id);
+        if (!error && data) {
+          const keys = data.map(d => d.checkpoint_key);
+          setVisitedCheckpoints(keys);
+          localStorage.setItem('gezgin_visited_checkpoints', JSON.stringify(keys));
+        }
+      } catch (err) {
+        console.error('Visited checkpoints fetch error:', err);
+      }
+    };
+    fetchVisited();
+  }, [user?.id]);
+
+  // Handle active swap ID fetching when showing requester code modal
+  useEffect(() => {
+    if (showQR && selectedBook) {
+      const fetchSwapId = async () => {
+        const { data } = await supabase
+          .from('swap_requests')
+          .select('id')
+          .eq('book_id', selectedBook)
+          .eq('requester_id', user.id)
+          .eq('status', 'accepted')
+          .limit(1)
+          .maybeSingle();
+        if (data) {
+          setActiveSwapId(data.id);
+        } else {
+          toast.error('Aktif onaylanmış takas isteği bulunamadı.');
+          setShowQR(false);
+        }
+      };
+      fetchSwapId();
     }
-  });
+  }, [showQR, selectedBook, user?.id]);
+
+  // Code countdown timer
+  useEffect(() => {
+    if (showQR && activeSwapId) {
+      setQrTimestamp(Date.now());
+      setSecondsLeft(10);
+      const interval = setInterval(() => {
+        setSecondsLeft((prev) => {
+          if (prev <= 1) {
+            setQrTimestamp(Date.now());
+            return 10;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [showQR, activeSwapId]);
 
   const handleCheckIn = async (bookId: string, locIndex: number, locationName: string) => {
     const key = `${bookId}-${locIndex}`;
@@ -133,20 +191,19 @@ export const Swap: React.FC = () => {
       return;
     }
 
-    const newList = [...visitedCheckpoints, key];
-    setVisitedCheckpoints(newList);
-    localStorage.setItem('gezgin_visited_checkpoints', JSON.stringify(newList));
-
     try {
-      const newIntellectual = (user.karma?.intellectual || 0) + 15;
-      const newTotal = Math.round(((user.karma?.physical || 0) + newIntellectual + (user.karma?.social || 0)) / 3);
-
-      const { error } = await supabase
-        .from('profiles')
-        .update({ karma_intellectual: newIntellectual })
-        .eq('id', user.id);
+      toast.loading('Ziyaret işleniyor...', { id: 'checkin' });
+      
+      const { data: newIntellectual, error } = await supabase
+        .rpc('check_in_at_checkpoint', { p_checkpoint_key: key });
 
       if (error) throw error;
+
+      const newTotal = Math.round(((user.karma?.physical || 0) + newIntellectual + (user.karma?.social || 0)) / 3);
+
+      const newList = [...visitedCheckpoints, key];
+      setVisitedCheckpoints(newList);
+      localStorage.setItem('gezgin_visited_checkpoints', JSON.stringify(newList));
 
       useStore.setState((state: any) => ({
         user: {
@@ -160,11 +217,12 @@ export const Swap: React.FC = () => {
       }));
 
       toast.success(`Harika! ${locationName} mekânını ziyaret ettiniz. +15 Entelektüel Karma kazanıldı! 🧭`, {
+        id: 'checkin',
         duration: 5000
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error updating intellectual karma:', err);
-      toast.error('Karma güncellenirken bir hata oluştu fakat ziyaret günlüğünüze eklendi.');
+      toast.error(err.message || 'Ziyaret gerçekleştirilemedi.', { id: 'checkin' });
     }
   };
 
@@ -485,10 +543,10 @@ export const Swap: React.FC = () => {
           <p className="text-ink/60 mt-1 font-sans text-xs sm:text-sm">Yakınındaki güvenli buluşma noktalarında takas yap.</p>
         </div>
         <button 
-          onClick={() => setShowScanner(true)}
+          onClick={() => { setShowScanner(true); setEnteredCode(''); }}
           className="bg-karma/20 text-karma px-4 py-2 rounded-xl active:bg-karma/30 transition-colors shadow-sm flex items-center gap-2 tap-target font-bold text-sm"
         >
-          <ScanLine size={18} /> QR Okut
+          <Lock size={18} /> Güvenlik Kodu Gir
         </button>
       </motion.header>
 
@@ -962,7 +1020,7 @@ export const Swap: React.FC = () => {
                     onClick={() => setShowQR(true)}
                     className="text-sm font-bold px-4 py-2 rounded-xl transition-colors bg-karma text-ink shadow-md shadow-karma/30 hover:bg-karma/90"
                   >
-                    QR ile Onayla
+                    Kod Al
                   </button>
                   <button
                     onClick={() => {
@@ -980,9 +1038,9 @@ export const Swap: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* QR Code Modal */}
+      {/* Security Code Display Modal for Requester */}
       <AnimatePresence>
-        {showQR && (
+        {showQR && activeSwapId && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 bg-ink/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
@@ -990,53 +1048,124 @@ export const Swap: React.FC = () => {
           >
             <motion.div
               initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
-              className="bg-white w-full max-w-sm rounded-3xl p-8 relative overflow-hidden flex flex-col items-center text-center"
+              className="bg-white w-full max-w-sm rounded-3xl p-8 relative overflow-hidden flex flex-col items-center text-center shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
               <button onClick={() => setShowQR(false)} className="absolute top-4 right-4 text-ink/40 hover:text-ink"><X size={24} /></button>
-              <div className="w-16 h-16 bg-karma/10 rounded-full flex items-center justify-center mb-6 text-karma"><QrCode size={32} /></div>
-              <h2 className="font-serif text-2xl font-bold mb-2 text-ink">Takas Onayı</h2>
-              <p className="text-sm text-ink/60 mb-8 px-4">Karşı tarafın Parşömen uygulamasından bu QR kodu okutmasını isteyin.</p>
-              <div className="w-48 h-48 bg-white rounded-xl border-2 border-dashed border-ink/20 flex items-center justify-center mb-8 relative p-4 shadow-sm">
-                <QRCodeSVG value={JSON.stringify({ type: 'swap', bookId: activeBook?.id, requesterId: user.id, timestamp: qrTimestamp })} size={150} fgColor="#1A202C" />
-                <motion.div
-                  animate={{ top: ['0%', '100%', '0%'] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
-                  className="absolute left-0 right-0 h-1 bg-karma/50 shadow-[0_0_10px_rgba(212,175,55,0.8)] z-10"
-                />
+              <div className="w-16 h-16 bg-karma/10 rounded-full flex items-center justify-center mb-6 text-karma"><KeyRound size={32} /></div>
+              <h2 className="font-serif text-2xl font-bold mb-2 text-ink">Takas Doğrulama</h2>
+              <p className="text-sm text-ink/60 mb-6 px-4">Bu güvenlik kodunu kitap sahibine ileterek takası onaylamasını isteyin.</p>
+              
+              {/* Giant 6-digit code display */}
+              <div className="bg-parchment-light py-5 px-8 rounded-2xl border border-ink/10 mb-6 tracking-widest text-4xl font-mono font-bold text-ink shadow-sm relative overflow-hidden">
+                {generate6DigitCode(activeSwapId, qrTimestamp)}
               </div>
-              <div className="flex items-center gap-2 text-xs font-bold text-green-600 bg-green-50 px-4 py-2 rounded-full mb-6">
-                <CheckCircle2 size={16} /> Güvenli Bölge Doğrulandı
+              
+              {/* Progress countdown bar */}
+              <div className="w-full max-w-[200px] mb-6">
+                <div className="flex justify-between items-center text-[10px] text-ink/40 font-bold mb-1">
+                  <span>KOD YENİLENİYOR</span>
+                  <span>{secondsLeft}sn</span>
+                </div>
+                <div className="w-full bg-ink/5 h-1.5 rounded-full overflow-hidden">
+                  <motion.div
+                    key={secondsLeft}
+                    initial={{ width: '100%' }}
+                    animate={{ width: '0%' }}
+                    transition={{ duration: 1, ease: 'linear' }}
+                    className="h-full bg-karma rounded-full"
+                  />
+                </div>
               </div>
 
+              <div className="flex items-center gap-2 text-xs font-bold text-green-600 bg-green-50 px-4 py-2 rounded-full">
+                <CheckCircle2 size={16} /> Güvenli Bölge Doğrulandı
+              </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
-      {/* Scanner */}
-      <QRScanner 
-        isOpen={showScanner}
-        onClose={() => setShowScanner(false)}
-        onScan={(data) => {
-          setShowScanner(false);
-          try {
-            const parsed = JSON.parse(data);
-            if (parsed.type === 'swap' && parsed.bookId && parsed.requesterId && parsed.timestamp) {
-              const now = Date.now();
-              const diff = Math.abs(now - parsed.timestamp);
-              if (diff > 60000) {
-                toast.error('Karekodun süresi dolmuş! Lütfen yeni bir karekod taratın.');
-                return;
-              }
-              executeSwap(parsed.bookId, parsed.requesterId);
-            } else {
-              toast.error('Geçersiz QR kod.');
-            }
-          } catch (err) {
-            toast.error('Karekod okunamadı.');
-          }
-        }}
-      />
+
+      {/* Security Code Entry Modal for Owner */}
+      <AnimatePresence>
+        {showScanner && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-ink/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+            onClick={() => setShowScanner(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              className="bg-white w-full max-w-sm rounded-3xl p-8 relative overflow-hidden flex flex-col items-center text-center shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <button onClick={() => setShowScanner(false)} className="absolute top-4 right-4 text-ink/40 hover:text-ink min-h-[44px] px-2"><X size={24} /></button>
+              <div className="w-16 h-16 bg-karma/10 rounded-full flex items-center justify-center mb-4 text-karma"><Lock size={32} /></div>
+              <h2 className="font-serif text-2xl font-bold mb-2 text-ink">Güvenlik Kodu Doğrulama</h2>
+              <p className="text-xs text-ink/60 mb-6 px-4">Alıcının ekranındaki 6 haneli güvenlik kodunu girerek takası tamamlayın.</p>
+              
+              <div className="w-full mb-6">
+                <input
+                  type="text"
+                  pattern="[0-9]*"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={enteredCode}
+                  onChange={(e) => setEnteredCode(e.target.value.replace(/[^0-9]/g, ''))}
+                  placeholder="000000"
+                  className="w-full bg-parchment-light border border-ink/10 py-4 rounded-2xl text-center text-3xl font-mono font-bold tracking-widest text-ink focus:outline-none focus:border-karma transition-all shadow-inner"
+                  style={{ fontSize: '32px' }}
+                />
+              </div>
+
+              <button
+                type="button"
+                disabled={enteredCode.length !== 6 || isVerifying}
+                onClick={async () => {
+                  setIsVerifying(true);
+                  try {
+                    // Find matching active accepted swap request
+                    const { data: activeSwaps, error: activeSwapsErr } = await supabase
+                      .from('swap_requests')
+                      .select('id, book_id, requester_id, owner_id')
+                      .eq('status', 'accepted')
+                      .or(`owner_id.eq.${user.id},requester_id.eq.${user.id}`);
+                    
+                    if (activeSwapsErr || !activeSwaps || activeSwaps.length === 0) {
+                      toast.error('Aktif onaylı takas talebiniz bulunamadı.');
+                      return;
+                    }
+
+                    let matchingSwap = null;
+                    for (const sw of activeSwaps) {
+                      if (verify6DigitCode(sw.id, enteredCode)) {
+                        matchingSwap = sw;
+                        break;
+                      }
+                    }
+
+                    if (matchingSwap) {
+                      // Execute swap using the matched book ID
+                      await executeSwap(matchingSwap.book_id, matchingSwap.owner_id === user.id ? matchingSwap.requester_id : matchingSwap.owner_id);
+                      setShowScanner(false);
+                      setEnteredCode('');
+                    } else {
+                      toast.error('Geçersiz veya süresi dolmuş güvenlik kodu.');
+                    }
+                  } catch (err) {
+                    console.error(err);
+                  } finally {
+                    setIsVerifying(false);
+                  }
+                }}
+                className="w-full bg-ink text-parchment-light py-4 rounded-xl font-bold active:bg-ink/80 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed mb-2 min-h-[48px]"
+              >
+                {isVerifying ? 'Doğrulanıyor...' : 'Kodu Doğrula ve Teslim Et'}
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Edebi Harita İstatistik Paneli */}
       {mapMode === 'literary' && (

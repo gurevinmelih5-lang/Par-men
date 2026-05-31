@@ -39,8 +39,9 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
   const [isSearching, setIsSearching] = useState(false);
   // Tracks whether user manually uploaded an image (not via Google Books)
   const [isManualUpload, setIsManualUpload] = useState(false);
-  // Confirmation that the uploaded image matches the book title
+  // Confirmation that the uploaded image matches the book title/author
   const [coverConfirmed, setCoverConfirmed] = useState(false);
+  const [manualConfirm, setManualConfirm] = useState(false);
   const [isOcrLoading, setIsOcrLoading] = useState(false);
 
 
@@ -50,7 +51,7 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
     setPreview(null);
     setIsManualUpload(false);
     setCoverConfirmed(false);
-    setIsManualUpload(false);
+    setManualConfirm(false);
   };
 
   const handleClose = () => {
@@ -117,17 +118,9 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
         setPreview(URL.createObjectURL(compressedFile));
         setIsManualUpload(true);
         setCoverConfirmed(false);
-        setCoverConfirmed(false);
+        setManualConfirm(false);
 
-        // Mobil cihazlarda OCR adımını cihaz kilitlenmelerini önlemek için atlıyoruz
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        
-        if (isMobile) {
-           setCoverConfirmed(true);
-           return;
-        }
-
-        // OCR ile Kitap Adı Eşleşmesi Kontrolü (Sadece Masaüstü)
+        // OCR ile Kitap Adı veya Yazar Eşleşmesi Kontrolü (Masaüstü ve Mobil)
         setIsOcrLoading(true);
         try {
           toast.loading('Kapak görseli analiz ediliyor...', { id: 'ocr-toast' });
@@ -136,27 +129,23 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
           
           const cleanText = text.toLowerCase().replace(/[^a-zçğıöşü]/g, '');
           const titleWords = formData.title.toLowerCase().replace(/[^a-zçğıöşü\s]/g, '').split(/\s+/).filter(w => w.length > 2);
+          const authorWords = formData.author.toLowerCase().replace(/[^a-zçğıöşü\s]/g, '').split(/\s+/).filter(w => w.length > 2);
           
-          const matches = titleWords.length > 0 && titleWords.some(word => cleanText.includes(word));
+          const titleMatches = titleWords.length > 0 && titleWords.some(word => cleanText.includes(word));
+          const authorMatches = authorWords.length > 0 && authorWords.some(word => cleanText.includes(word));
+          const matches = titleMatches || authorMatches;
           
           if (matches) {
              setCoverConfirmed(true);
              toast.success('Kapak metni onaylandı!', { id: 'ocr-toast' });
           } else {
-             setFile(null);
-             setPreview(null);
-             setIsManualUpload(false);
              setCoverConfirmed(false);
-             toast.error('Kitap adı görselle eşleşmedi! Lütfen kitabın kapağını net bir şekilde çekerek tekrar yükleyin.', { id: 'ocr-toast' });
+             toast('Kitap adı veya yazarı görselle tam eşleşmedi. Görsel doğruysa lütfen manuel olarak onaylayın.', { id: 'ocr-toast', duration: 4000, icon: '⚠️' });
           }
         } catch (ocrErr) {
           console.error('OCR Hatası:', ocrErr);
-          setFile(null);
-          setPreview(null);
-          setIsManualUpload(false);
           setCoverConfirmed(false);
-          toast.error('Görsel analiz edilemedi! Lütfen kapağı net çeken bir fotoğraf yükleyin.', { id: 'ocr-toast' });
-          toast.dismiss('ocr-toast');
+          toast.error('Görsel analiz edilemedi! Kapak doğruysa lütfen manuel olarak onaylayın.', { id: 'ocr-toast' });
         } finally {
           setIsOcrLoading(false);
         }
@@ -172,6 +161,7 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
         setPreview(URL.createObjectURL(selectedFile));
         setIsManualUpload(true);
         setCoverConfirmed(false);
+        setManualConfirm(false);
       }
     }
   };
@@ -180,7 +170,7 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
     e.preventDefault();
 
     // Validate: if there's a manual upload, user must confirm it matches the title
-    if (isManualUpload && !coverConfirmed) {
+    if (isManualUpload && !coverConfirmed && !manualConfirm) {
       toast.error('Lütfen yüklediğiniz görselin kitap kapağıyla eşleştiğini onaylayın.');
       return;
     }
@@ -352,25 +342,58 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
 
                   {/* Onay durumu — sadece manuel yükleme yapıldığında */}
                   {isManualUpload && preview && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={`mt-2 p-3 border rounded-xl bg-green-50 border-green-200`}
-                    >
-                      {isOcrLoading ? (
-                        <div className="flex items-center gap-2 text-ink/60 text-xs font-medium py-1">
-                          <div className="w-4 h-4 border-2 border-karma border-t-transparent rounded-full animate-spin" />
-                          Görsel yapay zeka ile inceleniyor...
-                        </div>
-                      ) : (
-                        <div className="flex items-start gap-3">
-                          <CheckCircle2 size={16} className="text-green-500 mt-0.5" />
-                          <span className="text-xs text-green-800 font-bold leading-relaxed">
-                            Yapay Zeka Onayı: Görsel, kitap adıyla başarıyla eşleşti.
-                          </span>
-                        </div>
+                    <div className="mt-2 space-y-2">
+                      {isOcrLoading && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="p-3 border rounded-xl bg-parchment-dark/30 border-ink/5"
+                        >
+                          <div className="flex items-center gap-2 text-ink/60 text-xs font-medium py-1">
+                            <div className="w-4 h-4 border-2 border-karma border-t-transparent rounded-full animate-spin" />
+                            Görsel yapay zeka ile inceleniyor...
+                          </div>
+                        </motion.div>
                       )}
-                    </motion.div>
+
+                      {!isOcrLoading && coverConfirmed && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="p-3 border rounded-xl bg-green-50 border-green-200"
+                        >
+                          <div className="flex items-start gap-3">
+                            <CheckCircle2 size={16} className="text-green-500 mt-0.5" />
+                            <span className="text-xs text-green-800 font-bold leading-relaxed">
+                              Yapay Zeka Onayı: Görsel, kitap bilgileriyle başarıyla eşleşti.
+                            </span>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {!isOcrLoading && !coverConfirmed && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="p-3 border rounded-xl bg-amber-50 border-amber-200"
+                        >
+                          <p className="text-xs text-amber-800 font-bold mb-2">
+                            ⚠️ Yapay Zeka kitap bilgileri ile görseli tam eşleştiremedi. Kapak doğruysa lütfen manuel olarak onaylayın.
+                          </p>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={manualConfirm}
+                              onChange={(e) => setManualConfirm(e.target.checked)}
+                              className="w-4 h-4 rounded text-karma focus:ring-karma cursor-pointer"
+                            />
+                            <span className="text-[11px] text-amber-900 font-bold select-none cursor-pointer">
+                              Yüklediğim görselin kitap kapağı olduğunu onaylıyorum.
+                            </span>
+                          </label>
+                        </motion.div>
+                      )}
+                    </div>
                   )}
                 </div>
 
@@ -418,7 +441,7 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
 
                 <button
                   type="submit"
-                  disabled={loading || (isManualUpload && !coverConfirmed) || isOcrLoading}
+                  disabled={loading || (isManualUpload && !coverConfirmed && !manualConfirm) || isOcrLoading}
                   className="w-full mt-1 bg-ink text-parchment-light py-4 rounded-xl font-bold shadow-lg shadow-ink/20 active:bg-ink/80 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Ekleniyor...' : 'Kütüphaneye Ekle'}

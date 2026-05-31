@@ -1,6 +1,8 @@
 -- ============================================
--- PARŞÖMEN: İki Yönlü Kitap Takası (Sahiplik, Konum ve Şecere Değişimi)
--- Bu dosyayı Supabase SQL Editöründe çalıştırın!
+-- PARŞÖMEN: İki Yönlü Kitap Takası Talebi Kabul Etme
+-- Bu fonksiyon takas talebini kabul eder ve offered_book_id'yi kaydeder.
+-- Gerçek sahiplik değişimi ve şecere ekleme işlemleri, buluşma sırasında
+-- 6 haneli kod doğrulandığında complete_two_way_book_swap fonksiyonu ile yapılacaktır.
 -- ============================================
 
 CREATE OR REPLACE FUNCTION public.execute_two_way_book_swap(
@@ -15,12 +17,6 @@ DECLARE
   v_book_id UUID;
   v_requester_id UUID;
   v_owner_id UUID;
-  v_requester_name TEXT;
-  v_owner_name TEXT;
-  v_requester_lat NUMERIC;
-  v_requester_lng NUMERIC;
-  v_owner_lat NUMERIC;
-  v_owner_lng NUMERIC;
 BEGIN
   -- 1. Takas talebi bilgilerini al
   SELECT book_id, requester_id, owner_id 
@@ -33,7 +29,7 @@ BEGIN
   END IF;
 
   IF auth.uid() != v_owner_id THEN
-    RAISE EXCEPTION 'Unauthorized: Only the book owner can accept and execute a swap.';
+    RAISE EXCEPTION 'Unauthorized: Sadece kitap sahibi takası kabul edebilir.';
   END IF;
 
   -- IDOR Koruması: Karşıdan alınacak kitap gerçekten requester'a mı ait?
@@ -41,54 +37,10 @@ BEGIN
     SELECT 1 FROM public.books 
     WHERE id = p_offered_book_id AND owner_id = v_requester_id
   ) THEN
-    RAISE EXCEPTION 'Unauthorized: The offered book does not belong to the requester.';
+    RAISE EXCEPTION 'Unauthorized: Önerilen kitap istek sahibine ait değil.';
   END IF;
 
-  -- 2. Alıcı (requester) profil bilgilerini al
-  SELECT name, lat, lng 
-  INTO v_requester_name, v_requester_lat, v_requester_lng
-  FROM public.profiles
-  WHERE id = v_requester_id;
-
-  -- 3. Sahip (owner) profil bilgilerini al
-  SELECT name, lat, lng 
-  INTO v_owner_name, v_owner_lat, v_owner_lng
-  FROM public.profiles
-  WHERE id = v_owner_id;
-
-  -- 4. Kitap A'yı (talep edilen kitap) alıcıya (requester) devret ve konumunu güncelle
-  UPDATE public.books
-  SET owner_id = v_requester_id,
-      lat = v_requester_lat,
-      lng = v_requester_lng,
-      location = CASE 
-        WHEN v_requester_lat IS NOT NULL AND v_requester_lng IS NOT NULL 
-        THEN ST_SetSRID(ST_MakePoint(v_requester_lng, v_requester_lat), 4326)::geography 
-        ELSE NULL 
-      END
-  WHERE id = v_book_id;
-
-  -- 5. Kitap B'yi (sunulan kitap) sahibe (owner) devret ve konumunu güncelle
-  UPDATE public.books
-  SET owner_id = v_owner_id,
-      lat = v_owner_lat,
-      lng = v_owner_lng,
-      location = CASE 
-        WHEN v_owner_lat IS NOT NULL AND v_owner_lng IS NOT NULL 
-        THEN ST_SetSRID(ST_MakePoint(v_owner_lng, v_owner_lat), 4326)::geography 
-        ELSE NULL 
-      END
-  WHERE id = p_offered_book_id;
-
-  -- 6. Kitap A için yeni şecere (lineage) kaydı ekle
-  INSERT INTO public.book_lineage (book_id, city, owner_name, date)
-  VALUES (v_book_id, p_requester_city, v_requester_name, p_date);
-
-  -- 7. Kitap B için yeni şecere (lineage) kaydı ekle
-  INSERT INTO public.book_lineage (book_id, city, owner_name, date)
-  VALUES (p_offered_book_id, p_owner_city, v_owner_name, p_date);
-
-  -- 8. Takas talebini 'accepted' olarak güncelle ve offered_book_id'yi kaydet
+  -- 2. Takas talebini 'accepted' olarak güncelle ve offered_book_id'yi kaydet
   UPDATE public.swap_requests
   SET status = 'accepted',
       offered_book_id = p_offered_book_id
