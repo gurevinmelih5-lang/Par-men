@@ -41,7 +41,6 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
   const [isManualUpload, setIsManualUpload] = useState(false);
   // Confirmation that the uploaded image matches the book title/author
   const [coverConfirmed, setCoverConfirmed] = useState(false);
-  const [manualConfirm, setManualConfirm] = useState(false);
   const [isOcrLoading, setIsOcrLoading] = useState(false);
 
 
@@ -51,7 +50,6 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
     setPreview(null);
     setIsManualUpload(false);
     setCoverConfirmed(false);
-    setManualConfirm(false);
   };
 
   const handleClose = () => {
@@ -118,7 +116,6 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
         setPreview(URL.createObjectURL(compressedFile));
         setIsManualUpload(true);
         setCoverConfirmed(false);
-        setManualConfirm(false);
 
         // OCR ile Kitap Adı veya Yazar Eşleşmesi Kontrolü (Masaüstü ve Mobil)
         setIsOcrLoading(true);
@@ -140,12 +137,12 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
              toast.success('Kapak metni onaylandı!', { id: 'ocr-toast' });
           } else {
              setCoverConfirmed(false);
-             toast('Kitap adı veya yazarı görselle tam eşleşmedi. Görsel doğruysa lütfen manuel olarak onaylayın.', { id: 'ocr-toast', duration: 4000, icon: '⚠️' });
+             toast.error('Kitap adı veya yazarı görselle uyuşmuyor! Lütfen başka bir görsel yükleyin.', { id: 'ocr-toast' });
           }
         } catch (ocrErr) {
           console.error('OCR Hatası:', ocrErr);
           setCoverConfirmed(false);
-          toast.error('Görsel analiz edilemedi! Kapak doğruysa lütfen manuel olarak onaylayın.', { id: 'ocr-toast' });
+          toast.error('Görsel analiz edilemedi! Lütfen daha net bir kapak görseli yükleyin.', { id: 'ocr-toast' });
         } finally {
           setIsOcrLoading(false);
         }
@@ -161,7 +158,6 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
         setPreview(URL.createObjectURL(selectedFile));
         setIsManualUpload(true);
         setCoverConfirmed(false);
-        setManualConfirm(false);
       }
     }
   };
@@ -169,9 +165,9 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate: if there's a manual upload, user must confirm it matches the title
-    if (isManualUpload && !coverConfirmed && !manualConfirm) {
-      toast.error('Lütfen yüklediğiniz görselin kitap kapağıyla eşleştiğini onaylayın.');
+    // Validate: if there's a manual upload, it must match the title
+    if (isManualUpload && !coverConfirmed) {
+      toast.error('Yüklenen görsel kitap kapağıyla uyuşmuyor. Lütfen farklı bir görsel deneyin.');
       return;
     }
 
@@ -375,22 +371,11 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
                         <motion.div
                           initial={{ opacity: 0, y: -4 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="p-3 border rounded-xl bg-amber-50 border-amber-200"
+                          className="p-3 border rounded-xl bg-red-50 border-red-200"
                         >
-                          <p className="text-xs text-amber-800 font-bold mb-2">
-                            ⚠️ Yapay Zeka kitap bilgileri ile görseli tam eşleştiremedi. Kapak doğruysa lütfen manuel olarak onaylayın.
+                          <p className="text-xs text-red-800 font-bold">
+                            ❌ Yapay Zeka kitap bilgileri ile görseli eşleştiremedi. Lütfen kitap adını içeren farklı bir görsel deneyin.
                           </p>
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={manualConfirm}
-                              onChange={(e) => setManualConfirm(e.target.checked)}
-                              className="w-4 h-4 rounded text-karma focus:ring-karma cursor-pointer"
-                            />
-                            <span className="text-[11px] text-amber-900 font-bold select-none cursor-pointer">
-                              Yüklediğim görselin kitap kapağı olduğunu onaylıyorum.
-                            </span>
-                          </label>
                         </motion.div>
                       )}
                     </div>
@@ -441,7 +426,7 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose }) =
 
                 <button
                   type="submit"
-                  disabled={loading || (isManualUpload && !coverConfirmed && !manualConfirm) || isOcrLoading}
+                  disabled={loading || (isManualUpload && !coverConfirmed) || isOcrLoading}
                   className="w-full mt-1 bg-ink text-parchment-light py-4 rounded-xl font-bold shadow-lg shadow-ink/20 active:bg-ink/80 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Ekleniyor...' : 'Kütüphaneye Ekle'}
